@@ -1,0 +1,282 @@
+#iterate through directory
+import os
+import os.path
+import statistics
+#other
+import sys
+import time
+
+#Regressions and Plotting
+import matlab
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pylab
+import scipy
+from matplotlib import colors
+from matplotlib.ticker import PercentFormatter
+#image analysis
+from PIL import Image, ImageStat
+from scipy import stats
+from scipy.optimize import curve_fit
+from scipy.stats import mode, norm
+
+
+#fix runtime errors warnings.filterwarnings("ignore")
+#progress bar
+#jcube to csv
+def Jcube_to_csv(nL, nS, csv=None, geo_csv=None, bands=None, var=None):
+    '''Converts any Jcube or geocube csv file to numpy 2D array
+    Note: Requires pandas and numpy.
+    
+    Parameters
+    ----------
+    csv: str
+        Name of Jcube csv file with raw I/F data 
+    geo_csv: str
+        Name of csv file from Jason's geocubes with geographic info on a VIMS cube (.cub) 
+        Can include relative directory location (e.g. 'some_dir/test.csv')
+    nL: int
+        number of lines or y-dimension of VIMS cube
+    nS: int
+        number of samples or x-dimension of VIMS cube
+    vars: str
+        geo_cube parameters that include "I/F", lat", "lon", "lat_res", "lon_res", 
+        "phase", "inc", "eme", and "azimuth"
+    '''
+    ## check var is the correct string
+    if var not in ["lat", "lon", "lat_res", "lon_res", "phase", "inc", "eme", "azimuth"] and var is not None:
+        raise ValueError("Variable string ('var') is not formatted as one of the following options: \n"+\
+                        '"I/F", "lat", "lon", "lat_res", "lon_res", "phase", "inc", "eme", "azimuth"')
+    
+    ## create image of Titan
+    if geo_csv is None:
+        ## read csv; can include relative directory
+        csv = pd.read_csv(csv, header=None)
+    
+        def getMeanImg(csv, bands, nL, nS):
+            '''Get the mean I/F image for a set of wavelengths from a Jcube csv file
+            Note: a single 'bands' value will return the image at that wavelength.
+            
+            Parameters
+            ----------
+            csv: str 
+                name of csv file for VIMS cube
+            bands: int or list of int 
+                band values from 96-352 for near-infrared VIMS windows
+            nL: int
+                number of lines 
+            nS: int
+                number of samples
+            '''
+            if isinstance(bands, int):
+                bands = [bands]
+            img = []
+            for band in bands:
+                cube = np.array(csv)[:,band].reshape(nL,nS)
+                cube[cube < -1e3] = 0
+                img.append(cube)#[band, :, :])
+            return np.nanmean(img, axis=0)
+        return getMeanImg(csv=csv, bands=bands, nL=nL, nS=nS)
+    
+    ## create geocube 
+    if csv is None:
+        ## read csv; can include relative directory
+        geo = pd.read_csv(geo_csv, header=None)
+        ## output chosen variable 2D array
+        if var == 'lat':
+            return np.array(geo)[:,0].reshape(nL,nS)
+        if var == 'lon':
+            return np.array(geo)[:,1].reshape(nL,nS)
+        if var == 'lat_res':
+            return np.array(geo)[:,2].reshape(nL,nS)
+        if var == 'lon_res':
+            return np.array(geo)[:,3].reshape(nL,nS)
+        if var == 'phase':
+            return np.array(geo)[:,4].reshape(nL,nS)
+        if var == 'inc':
+            return np.array(geo)[:,5].reshape(nL,nS)
+        if var == 'eme':
+            return np.array(geo)[:,6].reshape(nL,nS)
+        if var == 'azimuth':
+            return np.array(geo)[:,7].reshape(nL,nS)
+#image brightnes
+def brightness( im_file ):
+    im = Image.open(im_file).convert('L')
+    stat = ImageStat.Stat(im)
+    return stat.mean[0]
+#N/S Boundary detection fits
+def polyfit(x, y, degree):
+    results = {}
+    coeffs = np.polyfit(x, y, degree)
+    p = np.poly1d(coeffs)
+    #calculate r-squared
+    yhat = p(x)
+    ybar = np.sum(y)/len(y)
+    ssreg = np.sum((yhat-ybar)**2)
+    sstot = np.sum((y - ybar)**2)
+    return ssreg / sstot
+def gaussian(x, amplitude, mean, stddev):
+    return amplitude * np.exp(-((x - mean) / 4 / stddev)**2)
+def poly6(x, g, h, i, j, a, b, c):
+    return g*x**6+h*x**5+i*x**4+j*x**3+a*x**2+b*x+c
+#analysis code
+def shift (csv, image, lat, lon, crop):
+    ## left and right are the x-values to analyze the region of interest in the cyl image
+
+    ## read cyl image and convert to dtype npfloat32 
+
+    im = plt.imread(image)[:,:,0]
+
+    im = im.astype(np.float32)
+    left = crop[1]
+    right = crop[2]
+
+
+    ## create high-contrasting (HC) band image (I/F difference columns)
+
+    hc_band = np.empty((361, 725), float)#125, 133), float)
+
+    nsa_lats = []; nsa_lons = []; cols = []
+
+    for col in range(left, right):#im.shape[1]):
+        ## new code to append correct number of nans for 3 deg latitude shifts
+        ## with input of pixel resolution
+        pix_res = 0.5
+        num_of_nans = int(3.0/pix_res)
+        nans = [np.nan]*num_of_nans
+        shift_IF_down = np.insert(im[:,col], [0]*num_of_nans, nans)
+        #print(im[:,col].flatten().size)#, np.insert(im[:,col], shift, nans))
+        shift_IF_up = np.concatenate((im[:,col], nans))
+        #shift_IF_down  = np.insert(im[:,col], [0,0], [np.nan,np.nan])
+        #shift_IF_up  = np.concatenate((im[:,col],[np.nan],[np.nan]))
+        #print((shift_IF_up - shift_IF_down)[num_of_nans:(-num_of_nans)], lat[:,col].size)
+        hc_band[:,col] = (shift_IF_up - shift_IF_down)[int(num_of_nans/2):int(-num_of_nans/2)]
+        ## subset HC band column b/t 30°S to 0°N 
+        #hc_band[crop[0]:crop[1],crop[2]:crop[3]]
+        if_sh = hc_band[:,col][(lat[:,col] > -30.0) & (lat[:,col] < 0.0)]
+        lat_sh = lat[:,col][(lat[:,col] > -30.0) & (lat[:,col] < 0.0)]
+        lon_sh = lon[:,col][(lat[:,col] > -30.0) & (lat[:,col] < 0.0)]
+        ## apply 6th-order polyfit to I/F brightness profile
+
+        popt, _ = curve_fit(poly6, lat_sh, if_sh)
+
+        ## find and record latitude of minimum I/F in 6th-order polyfit
+        try:        
+            if (col < crop[3]) & (crop[2] <= col):
+                nsa_lats.append(lat_sh[poly6(lat_sh, *popt) == np.max(np.abs(poly6(lat_sh, *popt)))][0])
+                nsa_lons.append(lon_sh[poly6(lat_sh, *popt) == np.max(np.abs(poly6(lat_sh, *popt)))][0])
+                cols.append(col)
+        except:
+            pass
+
+
+    lats = lat.tolist()
+    latlist = []
+    x=0
+    plottedlat = []
+    for i in lats:
+        latlist.append(lat[x,0])
+        x+=1
+    for i in range(len(nsa_lats)):
+        for x in range(len(latlist)):
+            if nsa_lats[i] == latlist[x]:
+                plottedlat.append(x)
+    #print(cols, plottedlat)
+    try: 
+        slope, intercept, r, p, se = stats.linregress(cols, plottedlat)
+    except:
+        return(0, 0, 0, 0, False, 0)
+    #line
+    f = lambda x:  intercept + slope*x-crop[0]
+    z = lambda x:  x - crop[ 0]
+    yaxis = [f(x) for x in cols]
+    points = [z(x) for x in plottedlat]
+    deviation = np.std(plottedlat)
+    #histogram
+    avg = np.mean(points)
+    var = np.var(points)
+    # From that, we know the shape of the fitted Gaussian.
+    if len(points) < 1 or var <= 1: 
+        return(0, 0, 0, 0, False, 0)
+    pdf_x = np.linspace(np.min(points),np.max(points),100)
+    pdf_y = 1.0/np.sqrt(2*np.pi*var)*np.exp(-0.5*(pdf_x-avg)**2/var)
+
+    #histogram plotting :
+    plt.figure()
+    plt.hist(points,30,density=True)
+    plt.plot(pdf_x,pdf_y,'k--')
+    #conversion from point back to lat
+    Histmax = np.argmax(pdf_y) 
+    preLat = int(pdf_x[Histmax] + crop[0]) #crop[0] comes from lambda z
+    histOut = lat[preLat][0]
+    # due dilligence
+    plt.close('all') 
+    return nsa_lats, nsa_lons, hc_band, histOut, True, deviation
+def ImageToAnalyze (image, directoryList, cropParam, lat, lon):
+    #print(image)
+    nsa_lats, nsa_lons, uncroppedimgdata, histMaxLat, computable, deviation  = shift(directoryList[~0], image,lat, lon,cropParam)
+    folder_path = directoryList[4] + "Results"
+    #generates folders
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    #generates and opens all txt files
+    latResults = folder_path + "/Lat.txt"
+    deviationResults = folder_path + "/Deviations.txt"
+    filenameResults = folder_path + "/Filenames.txt"
+    anomalyResults = folder_path + "/Anomaly.txt"
+    if directoryList[2] > 0:
+        openType = "a+"
+    else:
+        openType = "w"
+    latFile = open(latResults, openType)
+    deviationFile = open(deviationResults, openType)
+    anomalyFile = open(anomalyResults,openType)
+    filenameFile = open(filenameResults, openType)
+    #writes to txt file
+    print(computable)
+    if computable == True:
+        latFile.write(str(histMaxLat) + "\n")
+        deviationFile.write(str(deviation) + "\n")
+        filenameFile.write(image + "\n")
+    elif computable == False:
+        anomalyFile.write(image + "\n")
+    filenameFile.close()
+    anomalyFile.close()
+    deviationFile.close()
+    latFile.close()
+def main(DirectoryFolder, imgFile, csvDir):  
+    imgDirectoryFolder = DirectoryFolder + imgFile  
+    i = 0
+    # ITA = image to analyze | Img = Image | # dir = Directory | crop order: bottom, top, left, right | for general data, use img. for pixel info, use ITA
+    imgFileTypes = (".jpeg", ".png", ".tif")
+    csvDirectory = (DirectoryFolder + csvDir)
+    csvDirectory += os.listdir((csvDirectory))[0]
+    print(csvDirectory)
+    fileInfo = [imgDirectoryFolder, "", i, csvDirectory, DirectoryFolder]
+    #crop of image for plotting + lines
+    crop = [100, 250, 0, 500]
+    #find directory
+    list = os.listdir(imgDirectoryFolder) 
+    imgS = Image.open((imgDirectoryFolder + list[0]))
+    width, height = imgS.size
+    #csv data 
+    lat = Jcube_to_csv(geo_csv = csvDirectory, var='lat', nL=height, nS=width)
+    lon = Jcube_to_csv(geo_csv = csvDirectory, var='lon',  nL=height, nS=width)
+
+    number_files = len(os.listdir(imgDirectoryFolder))
+    print ("Number of files in directory: ",number_files)
+    #iterates over all files in directory
+    for filename in os.listdir(imgDirectoryFolder):
+        i = 0
+        if (filename.endswith(imgFileTypes)): 
+            fileInfo[1] = filename
+            imageFN = str(fileInfo[0] + fileInfo[1])
+            ImageToAnalyze(imageFN, fileInfo,crop, lat, lon)
+            i+=1
+            fileInfo[2] = i
+bigFolder = 'C:/Users/aadvi/Desktop/Titan Paper/Data/T85/'
+imageFolder = 'T85.vis.cyl/'
+csvFolder = 'T85.CSV/'
+main(bigFolder, imageFolder, csvFolder)

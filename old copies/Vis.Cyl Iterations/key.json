@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "profound-actor-301403",
+  "private_key_id": "5edda0bcf87860442b8ea0662510b0f238b9f954",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCbgj3Vn9vNXBdJ\nauBE3qfom+WYEYSCTEck1f3zISXbVdUc8VVmqitrILHKqwYVz4HtRaHV5olssbe2\n2ZXYVewS0g5k7y+PDZ3BFgXtTHMYO98Co1VzH+yuX4gJgpTrRhv+AYIFwwLt3WPo\nijICRzww6S7P+vn41QFFzfMwZrBIYm6+tGymzoxoSErDMJtn660TSR5wr7JOhnWo\nUx0GXZOvySkqrOfE/p86RE3X0md63iOjRHZTGjxBhcXevI/DZUGiDIoGAR+PfeWw\nZZlf9rC9/oJKxxDNpRlWOqSSE9Z/6ZYlq+NaK0xIQs/MAuaU9FuklVV4nybhu6og\njLfQVj/HAgMBAAECggEAC88pWfKAqHOGCIXCD94mux6Hoh4xGrdR2cVvD7UPNmeq\nE5TCIFXrjoBA8CaVA41VYmAyKNe6d5N2uOnaHBUeTymTfUJqsVQz4X4GJ4icNEAW\nWzwYbkcuMT8WShPtXNaJ+VFCVKSusW3pZeHaErE31sZbzzXRy33a0bhmROEvduJL\nCchT+sU0pgvm8EKvru22hGak3z5NGoUVXXB/tbW2y49UJzarXZDeQ/akDHoXGJn5\nPVQEnZF9cX3VNQgVknE2J2jIfvfm+uG3VylveS9ZsVvgB0zSsBwvJnrSTP5N5HqQ\nyRMOk0QMUGQy5u4JGxAqipkoO0e1EOOVYFPCCY0S/QKBgQDSogcNDbMLqL0HBv2K\ngvbAwXHolmt8XiUyFHmR+MQ7LTnrWZQbrUZ5Igadd19tszq24lfMxIZqcpWU4Tjy\nky2A8q438hKkmCJjq8GlM3wu4nn/Rkjfs9XfFBhEhgj3EXnlXz3NaENj9fxjOHAQ\n2A5cutSFeYoI6YyJY6m+3pv2qwKBgQC9AMDLiU5sJr5ruFgAaTonQOrwqB0d6vyH\nJjC00aJoPp7KZUP5xDBIezaQaz54dmwYC3z76fGQuQCzkJzdapO+xFvHf6YOzXNq\nT7NTsEOYNIuZUv7W9WXRKVEVesRDLENWS+UW1Bl/nyy7lEEJne+Kbz4Za1ZtCtk4\nhiqdqNwLVQKBgH7yrsM8TXwqb/srSGZR9nxIWunutsuXRl2/n2HOCB8ObAkfzTc9\nIOtjCY+gYcCRNEMDeh1tGQJRGzxG3fa9o8BDA6OuX3QaSSe/Xg++TwtG7nZfmw5Q\nqgcwakvqaL7YJpqK44nIXE2D9WCrpEdSoJ1c8TedAAfNEym/CpCCRIfPAoGAAjwr\nC30hL0g6Aj4Y1FBqPqKW5KeoSH1J5TM/ajP8bq0m5Y/TAPYf+At09ro97+C+oH4q\nSTRYBfUaHAV+xWOIQb5Cs5Y/2Xb2gXBV14yDEB628+Y2W0ZloNaTPeTIw16XoUKe\nf+mcL5UrS0CSkFGMzp9IJbbOO9XgAboccObZS00CgYEAvQQd1DgIYIiRL49Rz/DW\n5lqPy9II0tew7oRFGVcsV+otbPUVhDGZJCdVVaWeTbicLX/gXWHeiP8fEY1AMVsi\nuEv0UNwTPHXWa/vOV4DZpcHDNp4BHh/X+KZt1KKoSy30z7/0Sr6vvQ5Z+JmHhAPA\nSjhh0O7yNlTYCjP9yVtRQ00=\n-----END PRIVATE KEY-----\n",
+  "client_email": "aadvik-vashist@profound-actor-301403.iam.gserviceaccount.com",
+  "client_id": "112138725117031494228",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/aadvik-vashist%40profound-actor-301403.iam.gserviceaccount.com"
+}
