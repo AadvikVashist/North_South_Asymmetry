@@ -42,7 +42,7 @@ class Titan:
             self.stats()
     def getData(self):
         for i in range(len(self.datasets)):
-            if self.which == "All":
+            if self.which == "All" or self.which == "all":
                 print(self.datasets[i], "in whichDatasets")
                 x = data(self.directory,self.datasetsNSA[i], self.shiftDegree, self.purpose) 
             elif self.datasets[i] in self.which:
@@ -239,4 +239,4 @@ class Titan:
 #Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = ["all"])
+x = Titan(purpose = ["data","show"], info = 100, whichDatasets = "all")
