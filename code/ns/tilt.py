@@ -375,7 +375,7 @@ class Tilt:
                     plt.xticks(ticks = xTicks, labels = xTick, size = tickSize*1.25)
                     plt.yticks(ticks = yTicks, labels = yTick, size = tickSize*1.25)
                     print(self.angle(np.sqrt(g[0][0])))
-                    plt.figtext(0.5,0.75, "The NSA is located at "  + str(round(self.NSA[i][currentBand],3)) + "°S ± " + str(round(self.dev[i][currentBand],3)) + " with an angle of " + str(round(self.angle(d[0]),3)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(self.wavelength[bands[currentBand]]) + "µm", size = 14, horizontalalignment='center')
+                    plt.figtext(0.51,0.8, "The NSA is located at "  + str(round(self.NSA[i][currentBand],1)) + "°S ± " + str(round(self.dev[i][currentBand],1)) + " with an angle of " + str(round(self.angle(d[0]),1)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(np.round(self.wavelength[bands[currentBand]],3)) + "µm", size = 19, color = (1,1,1,1), horizontalalignment='center')
                     plt.xlabel(xLabel, fontsize = axisFontSize);plt.ylabel(yLabel, fontsize = axisFontSize)
                     """if len(tiltDatasets) > 1:
                         title = Title + self.Tdataset[tiltDatasets[i]][0] + " dataset at wavelength " + str(self.wavelength[74]) + 'µm'

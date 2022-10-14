@@ -340,6 +340,7 @@ class data:
         width = []
         showPlot = "y"
         for col in range(self.width):
+            # if 
             subtraction = (np.insert(self.im[:,col], [0]*self.num_of_nans, self.nans) - np.concatenate((self.im[:,col], self.nans)))
             hc_band[:,col] = subtraction[int(self.num_of_nans/2):int(-self.num_of_nans/2)]
             #hc_band[crop[0]:crop[1],crop[2]:crop[3]]

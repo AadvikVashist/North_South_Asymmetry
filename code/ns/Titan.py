@@ -9,7 +9,7 @@ import numpy as np
 import time
 import subprocess, os, platform
 class Titan:
-    def __init__(self, directory = ['C:/Users/aadvi/Desktop/Titan Paper/Data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
+    def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
         self.directory = directory
         self.datasets = [dataset[0] for dataset in datasets]
         self.datasetsNSA = datasets
@@ -239,4 +239,5 @@ class Titan:
 #Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = ["all"])
+if __name__ == "__main__":
+    x = Titan(purpose = ["figure","flux"], info = 100, whichDatasets = "All")

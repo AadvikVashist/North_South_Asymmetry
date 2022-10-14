@@ -494,9 +494,10 @@ class NS_Flux_Ratio:
             axs[i].text(.36,1.35, Seasons[i], fontsize = 20)
             axs[i].minorticks_on()
             if i == 0:             
-                axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True)
+                axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')
                 axs[i].xaxis.set_label_position('top')
-                axs[i].set_xlabel(xLabel, size = axisFontSize)
+                # axs[i].set_xlabel(xLabel, size = axisFontSize)
+                axs[i].minorticks_on()
             elif i == 2:
                 axs[i].xaxis.set_tick_params(labelbottom=True, labeltop =False)
                 axs[i].xaxis.set_label_position('bottom') 
@@ -522,7 +523,7 @@ class NS_Flux_Ratio:
         #lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
         lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
         lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-        plt.subplots_adjust(right = .8)
+        plt.subplots_adjust(right = .8, hspace = 0.12)
         fig.legend(lines, labels, fontsize = legendFontSize, loc = legendLocation, frameon = False, edgecolor = 'black', bbox_to_anchor = (1,0.2,0,0))
         
         fig.text(0.055, 0.5, yLabel, va='center', rotation='vertical', size = axisFontSize*1.25)

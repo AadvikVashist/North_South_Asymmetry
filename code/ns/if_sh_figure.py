@@ -451,6 +451,10 @@ class if_sh_Figure:
                     x = currentDataset.if_sh[band][1]
                     if self.Tdataset[dataset][0] in scales:
                         cData = scales.index(self.Tdataset[dataset][0])
+                        if dataset == 7:
+                            x = x[14::]
+                            y = y[14::]
+                            x /=self.ifScale[cData][1][band]
                         if dataset == 11:
                             x *=self.ifScale[cData][1][band]/255
                             x = x[0:240]
