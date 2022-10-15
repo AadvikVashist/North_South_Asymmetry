@@ -8,11 +8,20 @@ from tilt import Tilt
 import numpy as np
 import time
 import subprocess, os, platform
+# def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets = [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15, [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True, info = []):
 class Titan:
-    def __init__(self, directory = ['C:/Users/aadvi/Desktop/Titan Paper/Data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
+    def __init__(self, directory = {"flyby_parent_directory" : 'C:/Users/aadvi/Desktop/North_South_Asymmetry/Data',"flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : ['Figures', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart']},
+                    shiftDegree = 6,
+                    flybys =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],
+                                ['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],
+                                ['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],
+                                ['T108', 0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],
+                                ['283TI', 10, 25, [60,240]]],
+                    purpose = ["if_sh", [71,72,73], "show"],
+                    whichDatasets = True,  info = []):
         self.directory = directory
-        self.datasets = [dataset[0] for dataset in datasets]
-        self.datasetsNSA = datasets
+        self.flyby_names = [flyby[0] for flyby in flybys]
+        self.flybydata = flybys
         self.allDatasets = [] 
         self.allFiles = []
         self.purpose = purpose
@@ -41,17 +50,17 @@ class Titan:
         elif self.purpose[0] == "stats":
             self.stats()
     def getData(self):
-        for i in range(len(self.datasets)):
+        for i in range(len(self.flyby_names)):
             if self.which == "All" or self.which == "all":
-                print(self.datasets[i], "in whichDatasets")
-                x = data(self.directory,self.datasetsNSA[i], self.shiftDegree, self.purpose) 
-            elif self.datasets[i] in self.which:
-                print(self.datasets[i], "in whichDatasets")
-                x = data(self.directory,self.datasetsNSA[i], self.shiftDegree, self.purpose) 
+                print(self.flyby_names[i], "in whichDatasets")
+                x = data(self.directory,self.flybydata[i], self.shiftDegree, self.purpose) 
+            elif self.flyby_names[i] in self.which:
+                print(self.flyby_names[i], "in whichDatasets")
+                x = data(self.directory,self.flybydata[i], self.shiftDegree, self.purpose) 
             else:
-                print(self.datasets[i], "not in whichDatasets")  
+                print(self.flyby_names[i], "not in whichDatasets")  
     def fig4(self):
-        x = ComparisonToRoman(self.directory, self.datasetsNSA, self.shiftDegree)
+        x = ComparisonToRoman(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aComparison()
             self.saveFig(figure, "aComparison", 1)
@@ -65,7 +74,7 @@ class Titan:
             figure = x.dComparison()
             self.saveFig(figure, "dComparison", 1)
     def fig5(self):
-        x = if_sh_Figure(self.directory, self.datasetsNSA, self.shiftDegree)
+        x = if_sh_Figure(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aIF(title = "Seasonal Evolution of Titan's Atmospheric Meridional Brightness Profile", xLabel = "Latitude", yLabel = "I/F", bands = [24,35,50], size = [16,16], cMap = "viridis", axisFontSize = 10, titleFontSize = 15, legendLocation = 4, legendFontSize = 6, lineWidth = 1, dataPointStyle = ".", lineStyles = ["solid", "solid", "solid"], grid = 1, cmapMin = 0, cmapMax = 1)
             self.saveFig(figure, "aIF", 2)
@@ -88,7 +97,7 @@ class Titan:
             figure = x.gIF()
             self.saveFig(figure, "gIF", 2)  
     def fig6(self):
-        x = NS_Flux_Ratio(self.directory, self.datasetsNSA, self.shiftDegree)
+        x = NS_Flux_Ratio(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aNS_Flux()
             self.saveFig(figure, "aNS_Flux", 3)
@@ -111,7 +120,7 @@ class Titan:
             figure = x.gNS_Flux()
             self.saveFig(figure, "gNS_Flux", 3)
     def fig8(self):
-        x = Tilt(self.directory, self.datasetsNSA, self.shiftDegree)
+        x = Tilt(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aTiltPlot()
             self.saveFig(figure, "aTiltPlot", 4)
@@ -128,7 +137,7 @@ class Titan:
             figure = x.eTiltPlot()
             self.saveFig(figure, "eTiltPlot", 4)
     def printCSV(self):
-        printDatasets(self.directory, self.datasets, self.purpose)
+        printDatasets(self.directory, self.flyby_names, self.purpose)
     def tif(self):
         tif()
     def saveFig(self, figure, name, figType):
@@ -239,4 +248,4 @@ class Titan:
 #Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-x = Titan(purpose = ["data","show"], info = 100, whichDatasets = "all")
+x = Titan(purpose = ["data","write"], info = 100, whichDatasets = "all")
