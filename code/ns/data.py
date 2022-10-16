@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 import time
 import math
 from sklearn.metrics import r2_score
+import PIL
 class data:   
     def __init__(self, directory, datasetName, shiftDegree , purpose):
         #create all class paths,directories, and variables
@@ -109,8 +110,9 @@ class data:
         self.nans = [np.nan]*(self.num_of_nans)
         if self.purpose[0] == "if_sh":
             self.ifSubset = tuple([(self.columnLat > -90.0) & (self.columnLat < 90.0)])
-    def createFolder(self):
-        folderPath = self.masterDirectory + "/" + self.directoryList["analysis_folder"] + "/"
+    def createFolder(self, folderPath = None):
+        if not folderPath:
+            folderPath = os.path.join(self.masterDirectory,self.directoryList["analysis_folder"])
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
@@ -242,6 +244,7 @@ class data:
             print("data output type not understood; ", self.purpose[0], " not valid")
     def getDataControl(self): #iteration over images within flyby
         for self.iter in range(len(self.allFiles)):
+            self.a = time.time()
             self.currentFile = self.allFiles[self.iter]
             self.iterations.append(self.iter)
             self.dataAnalysis()
@@ -329,6 +332,9 @@ class data:
         width = []
         subtraction = (np.insert(self.im, 0, np.array(self.num_of_nans*[[0]*self.width]), axis = 0) - np.concatenate((self.im,self.num_of_nans*[[0]*self.width])))
         hc_band = subtraction[int(np.round(self.num_of_nans/2, 0)):-1*int(np.round(self.num_of_nans/2, 0))]
+        if True:
+            self.createFolder(os.path.join(self.masterDirectory,self.flyby,"hc_band"))
+            self.convert_array_to_image(hc_band, os.path.join(self.masterDirectory,self.flyby,"hc_band", (os.path.splitext(os.path.relpath(self.currentFile,os.path.join(self.masterDirectory,self.flyby,self.directoryList["flyby_image_directory"])))[0] +  "_band")))
         if_sh = hc_band[self.subset]
         lon_subset = []
         if type(self.leftCrop) is list:
@@ -362,6 +368,7 @@ class data:
             else:
                 width.append(False)
         self.NSA_Analysis(nsa_lats, self.im,width)
+        print(time.time() - self.a)
     def ifAnalysis(self):
         #open image arrays
         try:
@@ -466,3 +473,30 @@ class data:
             return derivativeRoots.real
         except:
             return None
+    def convert_array_to_image(self, array, savename):
+        if array is not np.array:
+            array = np.array(array, dtype=np.float32)
+        else:
+            array.astype(np.uint8)
+        quintiles = np.quantile(array,np.arange(0,1.01,0.01))
+        # quintile_range = [quintiles[i]-quintiles[i-1] for i in range(4,len(quintiles-3))]
+        # min = 0
+        # max = 0
+    
+        min = quintiles[15]
+        max = quintiles[-16]
+        
+        
+        # plt.imshow(array)
+        # plt.show()
+        if min != 0:
+            array -= min
+        max = max-min
+        array = np.clip(array, 0, max)
+        ranges = np.ptp(array)
+        if ranges != 255:
+            array *= 255 / ranges
+        array.astype(np.int8)
+        im = PIL.Image.fromarray(array)
+        im = im.convert("L")
+        im.save(savename+ ".png")

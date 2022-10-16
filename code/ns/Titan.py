@@ -248,4 +248,6 @@ class Titan:
 #Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-x = Titan(purpose = ["data","write"], info = 100, whichDatasets = "all")
+abcdefg =time.time()
+x = Titan(purpose = ["data","show"], info = 100, whichDatasets = "all")
+print(time.time() - abcdefg)
