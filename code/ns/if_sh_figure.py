@@ -440,8 +440,8 @@ class if_sh_Figure:
             plt.ylabel(yLabel, size = label)
             plt.xlim(min(xTicks),max(xTicks))
             plt.ylim(min(yTicks),max(yTicks))
-            plt.xticks(xTicks,fontsize=18)
-            plt.yticks(ticks = yTicks, labels = yTick,fontsize=18)
+            plt.xticks(xTicks,fontsize=26)
+            plt.yticks(ticks = yTicks, labels = yTick,fontsize=26)
             for mission in datasets:
                 scales= [i[0] for i in self.ifScale]
                 for d in range(len(mission)):
@@ -476,8 +476,8 @@ class if_sh_Figure:
                     # if max(y) < 89:
                     #     plt.plot((x[0]-0.00005, x[0]+0.0005),(y[0],y[0]), color = (0,0,0,1), lw = 2)
                     cColor+=1
-            plt.legend(fontsize = "x-large", frameon = False)
+            plt.legend(fontsize = 20, frameon = False)
             figures.append(fig)
-            plt.figtext(0.5,0.9, str(self.wavelength[bands[band]]) +"µm" , fontsize = 20)
+            plt.figtext(0.5,0.9, str(self.wavelength[bands[band]]) +"µm" , fontsize = 24)
             plt.show()
         return figures

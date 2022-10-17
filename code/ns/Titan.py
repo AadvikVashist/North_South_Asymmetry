@@ -240,4 +240,4 @@ class Titan:
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
 if __name__ == "__main__":
-    x = Titan(purpose = ["figure","flux"], info = 100, whichDatasets = "All")
+    x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = "All")
