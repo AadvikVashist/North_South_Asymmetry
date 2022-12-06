@@ -8,8 +8,18 @@ from tilt import Tilt
 import numpy as np
 import time
 import subprocess, os, platform
+# def __init__(self, directory = ['C:/Users/aadvi
+# /Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets = [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15, [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True, info = []):
 class Titan:
-    def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
+    def __init__(self, directory = {"flyby_parent_directory" : '/Users/aadvik/Desktop/NASA/North_South_Assymetry/data',"flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : ['Figures', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart']},
+                    shiftDegree = 6,
+                    flybys =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],
+                                ['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],
+                                ['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],
+                                ['T108', 0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],
+                                ['283TI', 10, 25, [60,240]]],
+                    purpose = ["if_sh", [71,72,73], "show"],
+                    whichDatasets = True,  info = []):
         self.directory = directory
         self.datasets = [dataset[0] for dataset in datasets]
         self.datasetsNSA = datasets
@@ -239,5 +249,6 @@ class Titan:
 #Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
 #Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-if __name__ == "__main__":
-    x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = "All")
+abcdefg =time.time()
+x = Titan(purpose = ["figure","tilt"], info = 100, whichDatasets = "all")
+print(time.time() - abcdefg)

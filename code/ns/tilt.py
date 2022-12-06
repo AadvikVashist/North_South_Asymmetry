@@ -15,15 +15,15 @@ class Tilt:
         self.directory = directory
         self.Tdataset = Tdataset
         self.shiftDegree = dataInfo
-        self.createFigureFolder()
-        self.createFileFolder()
+        # self.createFigureFolder()
+        # self.createFileFolder()
         self.wavelengths()
-        self.createFigureFolder()
-        self.createFileFolder()
+        # self.createFigureFolder()
+        # self.createFileFolder()
         for self.i in Tdataset:
-            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+            self.allDatasets.append((os.path.join(self.directory["flyby_parent_directory"],"Result", self.i[0] + "_analytics.csv")))
     def createFigureFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0]
+        folderPath = self.directory["flyby_parent_directory"] + "/" + self.directory[8][0]
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath    
@@ -33,7 +33,7 @@ class Tilt:
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def wavelengths(self):
-        self.wavelength = (np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[4], header = None)))[0]
+        self.wavelength = (np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], "Titan Data/wavelength.csv"), header = None)))[0]
     def datasetDates(self):
         self.dates = []
         date = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[6], header = None))
@@ -186,7 +186,8 @@ class Tilt:
         return function, a, ys, V
     def image(self, datasets, band):  
         datasets = datasets[0]
-        currentfiles = [self.directory[0] + '/' + datasets + '/' + self.directory[3] + '/' + e for e in os.listdir(self.directory[0] + '/' + datasets + '/' + self.directory[3])][band]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"],datasets,"vis.cyl/")
+        currentfiles = [os.path.join(folderPath, e) for e in os.listdir(folderPath)][band]
         try: #open image arrays
             im = plt.imread(currentfiles)[:,:,0]
         except:
@@ -291,15 +292,15 @@ class Tilt:
             #info
             xLabel = 'Longitude (°)'
             yLabel = 'North South Boundary Latitude (°)'
-            axisFontSize = 15
+            axisFontSize = 25
             Title = "Axis Tilt of NSA found in the "
             titleFontSize = 12
             tickSize = 15
             lineWidth = 2
             dataPointStyle = ','
             angle = ["The NSA is located at ", "°S with an angle of "]
-            tiltDatasets = [3, 5]
-            bands = [74,89]
+            tiltDatasets = [5]
+            bands = [73,89]
             size = [16,16]
             self.wavelengths()
             for i in self.allDatasets:
@@ -328,7 +329,7 @@ class Tilt:
             for i in range(len(tiltDatasets)):
                 dataTdataset = self.Tdataset[tiltDatasets[i]]
                 a = data(self.directory, dataTdataset, self.shiftDegree, purpose) #columns,lon,lats
-                for currentBand in range(len(bands)):
+                for index, currentBand in enumerate(bands):
                     plt.rcParams["font.family"] = 'monospace'
                     plt.rcParams["font.weight"] = 'light'
                     #get image with band
@@ -343,9 +344,9 @@ class Tilt:
                     plt.show()
                     """
                     #data
-                    columns = a.band[currentBand][0]
-                    lon_shTilt = [i - 180 for i in a.band[currentBand][1]]
-                    nsa_lats = a.band[currentBand][2]
+                    columns = a.band[index][0]
+                    lon_shTilt = [i - 180 for i in a.band[index][1]]
+                    nsa_lats = a.band[index][2]
                     #split image to visible spectrum
                     column = [columns[columnRange[1]-columnRange[0]::],columns[0:columnRange[1]-columnRange[0]]]
                     nsa_lat = [nsa_lats[columnRange[1]-columnRange[0]::],nsa_lats[0:columnRange[1]-columnRange[0]]]
@@ -364,19 +365,33 @@ class Tilt:
                     fig = plt.figure(figsize = size)
                     firstLine = [d[0]*0 + d[1], d[0]*(columnRange[1]-columnRange[0]) + d[1]]
                     secondLine = [firstLine[1], firstLine[0] + d[0]*(columnRange[3]-columnRange[2])]
-                    plt.plot([min(lon_sh[0][2::]), max(lon_sh[0][2::])],firstLine, color = (0.2,0.75,1), linewidth = lineWidth)
-                    plt.plot([min(lon_sh[1][0:-2]), max(lon_sh[1][0:-2])],secondLine, color = (0.2,0.75,1), linewidth = lineWidth)
+                    fig, axs = plt.subplots(1, 1, figsize=size)                    
+                    axs.minorticks_on()
+                    axs.tick_params('both', length=10, width=2, which='major')
+                    axs.tick_params('both', length=5, width=1, which='minor')
                     #plot data
-                    plt.plot(lon_sh[0][2::], nsa_lat[0][2::], color = (1,0,0,1), linewidth = lineWidth)
-                    plt.plot(lon_sh[1][0:-2], nsa_lat[1][0:-2], color = (1,0,0,1), linewidth = lineWidth)
+                    axs.plot(lon_sh[0][2::], nsa_lat[0][2::], color = (1,0,0,1), linewidth = lineWidth)
+                    axs.plot(lon_sh[1][0:-2], nsa_lat[1][0:-2], color = (1,0,0,1), linewidth = lineWidth)
+                    axs.plot([min(lon_sh[0][2::]), max(lon_sh[0][2::])],firstLine, color = (0.2,0.75,1), linewidth = lineWidth)
+                    axs.plot([min(lon_sh[1][0:-2]), max(lon_sh[1][0:-2])],secondLine, color = (0.2,0.75,1), linewidth = lineWidth)
                     #show image band
-                    plt.imshow(np.flip(images, axis = 1), cmap = 'Greys', extent = (-180,180,-90,90))
+                    imagereers= sorted(list(os.listdir("/Users/aadvik/Desktop/cyl/")))[2::]
+                    curr_im = os.path.join("/Users/aadvik/Desktop/cyl/",imagereers[index])
+                    imagenew = plt.imread(curr_im)
+                    
+                    axs.imshow(np.flip(imagenew, axis = 0), cmap = 'Greys', extent = (-180,180,-90,90))
                     #ticks
-                    plt.xticks(ticks = xTicks, labels = xTick, size = tickSize*1.25)
-                    plt.yticks(ticks = yTicks, labels = yTick, size = tickSize*1.25)
+                    axs.set_xticks(ticks = xTicks, labels = xTick, size = tickSize*1.75)
+                    axs.set_yticks(ticks = yTicks, labels = yTick, size = tickSize*1.75)
                     print(self.angle(np.sqrt(g[0][0])))
+<<<<<<< Updated upstream
                     plt.figtext(0.51,0.8, "The NSA is located at "  + str(round(self.NSA[i][currentBand],1)) + "°S ± " + str(round(self.dev[i][currentBand],1)) + " with an angle of " + str(round(self.angle(d[0]),1)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(np.round(self.wavelength[bands[currentBand]],3)) + "µm", size = 19, color = (1,1,1,1), horizontalalignment='center')
                     plt.xlabel(xLabel, fontsize = axisFontSize);plt.ylabel(yLabel, fontsize = axisFontSize)
+=======
+                    print( "The NSA is located at "  + str(round(self.NSA[i][index],3)) + "°S ± " + str(round(self.dev[i][index],3)) + "° with an angle of " + str(round(self.angle(d[0]),3)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(self.wavelength[bands[index]]) + "µm")
+                    # plt.figtext(0.5,0.75, "The NSA is located at "  + str(round(self.NSA[i][currentBand],3)) + "°S ± " + str(round(self.dev[i][currentBand],3)) + "° with an angle of " + str(round(self.angle(d[0]),3)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(self.wavelength[bands[currentBand]]) + "µm", size = 14, horizontalalignment='center')
+                    axs.set_xlabel(xLabel, fontsize = axisFontSize, labelpad=7);axs.set_ylabel(yLabel, fontsize = axisFontSize, labelpad=7)
+>>>>>>> Stashed changes
                     """if len(tiltDatasets) > 1:
                         title = Title + self.Tdataset[tiltDatasets[i]][0] + " dataset at wavelength " + str(self.wavelength[74]) + 'µm'
                         plt.title(title, fontsize = titleFontSize*1.25)
