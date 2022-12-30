@@ -1,0 +1,7 @@
+{
+    "latex-workshop.bind.altKeymap.enabled": true,
+    "latex-workshop.bibtex.maxFileSize": 20,
+    "latex-workshop.hover.preview.cursor.color": "magenta",
+    "latex-workshop.hover.preview.maxLines": 50,
+    "editor.wordWrap": "on"
+}

@@ -7,6 +7,9 @@ import time
 import pandas as pd
 import csv
 # function to analyze a single image
+super_resolution = cv2.dnn_superres.DnnSuperResImpl_create()
+super_resolution.readModel("/Users/aadvik/Desktop/Important Projects/Autism-Adaptive-Video-Prompting/model/upscaling/ESPCN_x4.pb")
+super_resolution.setModel("espcn",4)
 def analyze_image(image_path):
     # read in the image
     img = cv2.imread(image_path)
@@ -52,11 +55,29 @@ def analyze_image(image_path):
         abc= cv2.mean(gray, mask=mask)
         if abc[0] > 60:
             percentage = 0.0
+        else:
+            canny = cv2.Canny(img, 10,80)
+            canny = cv2.blur(canny, (5,5))
+            # kernel = np.ones((2,2),np.uint8)
+            # canny = cv2.dilate(canny,kernel,iterations = 5)
+            # kernel = np.ones((3,3),np.uint8)
+            # canny = cv2.dilate(canny,kernel,iterations = 1)
+            canny = [[255 if c > 0 else 0 for c in r] for r in canny ]
+            canny = np.array(canny, dtype=np.uint8)
+            cannys = cv2.cvtColor(canny, cv2.COLOR_GRAY2BGR)
+            plt.imshow(cv2.bitwise_and(img,cannys))
+            
+            contours, hierarchy = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            plt.pause(0.1)
+            plt.imshow(cannys)
+            plt.pause(0.1)
+
     else:
         percentage = 0.0
         x = -1
         y = -1
         radius = -1
+
     return img, x, y, radius, percentage
 # function to recursively analyze all images in a folder
 def get_file_size(filename):
@@ -71,6 +92,8 @@ def expected_time_function(start_time, index, length, file_sized, dataset_size):
     except:
         expected_time = 0
     print("image", index, "of", length-1, " | ", np.around(delta_time,1), "/", np.around(expected_time,1), "seconds  | ", np.around(expected_time-delta_time), "seconds left")
+def ai_upscale(img):
+    return super_resolution.upsample(img)
 def analyze_folder(folder_path):
     results = []
     # iterate through all files in the folder
@@ -82,7 +105,7 @@ def analyze_folder(folder_path):
     curr_size = 0
     total_size = sum(file_sizes)
     for index, filename in enumerate(walked):
-        image_path = os.path.join(folder_path, filename)
+        image_path = filename
         image, x,y,radius, match_percentage = analyze_image(image_path)
         results.append([filename, image, x,y,radius, match_percentage])
         curr_size += file_sizes[index]
@@ -112,9 +135,9 @@ def write_results(results, csvFile, filepath):
             writer.writerow(row)
     print("rows written")
 # specify the parent folder to analyze
-parent_folder = "C:/Users/aadvi/Desktop/North_South_Asymmetry/data/Nantes"
+parent_folder = "data/Nantes"
 # call the function on the parent folder to get the list of results
 results = analyze_folder(parent_folder)
 # show_positive_results(results)
-nantes_csv = np.array(pd.read_csv('C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/nantes.csv'), dtype = 'O')
-write_results(results, nantes_csv, "C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/nantes_cubes.csv")
+nantes_csv = np.array(pd.read_csv('data/flyby_info/nantes.csv'), dtype = 'O')
+write_results(results, nantes_csv, "data/flyby_info/nantes_cubes.csv")
