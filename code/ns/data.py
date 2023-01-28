@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit
 import time
 import math
 from sklearn.metrics import r2_score
+import cv2
 class data:   
     def __init__(self, directory, datasetName, shiftDegree , purpose):
         #create all class paths,directories, and variables
@@ -20,6 +21,7 @@ class data:
     def createDirectories(self, directory, dataset): #create all file directory paths
         #basic datasets
         self.directoryList = directory
+        self.image_saver = []
         self.flyby = dataset[0]
         self.masterDirectory = self.directoryList[0]
         self.csvFolder = self.directoryList[2]
@@ -436,23 +438,32 @@ class data:
         count = 0
         non_zero = np.array(np.any(self.im != 0,axis=1))
         image = self.im[non_zero, :]
-        crop = self.im[non_zero, :]
+        Result = self.im[non_zero, :]
         ab = self.lat[non_zero,0]
-        Result = image[:,~np.any(crop == 0, axis = 0)]
-        try:
-            b = Result[int(len(Result)*0.25):int(len(Result)*0.75), int(len(Result[0])*0.25):int(len(Result[0])*0.75)]
-        except:
-            try:
-                self.im = plt.imread(self.currentFile)[:,:,0]
-            except:
-                self.im = plt.imread(self.currentFile)[:,:]
-            plt.imshow(self.im)
-            plt.show()
-            b = 0
-        b = np.mean(b)*10
-        a = np.mean(Result, axis = 1)
-        ab = ab[abs(a)<abs(b)]
-        a = a[abs(a)<abs(b)]
+        # try:
+        #     b = Result[int(len(Result)*0.25):int(len(Result)*0.75), int(len(Result[0])*0.25):int(len(Result[0])*0.75)]
+        # except:
+        #     try:
+        #         self.im = plt.imread(self.currentFile)[:,:,0]
+        #     except:
+        #         self.im = plt.imread(self.currentFile)[:,:]
+        #     plt.imshow(self.im)
+        #     plt.show()
+        #     b = 0
+        if type(self.leftCrop) is list:
+            im = Result[:,self.rightCrop[0]:self.leftCrop[0]]
+            im = np.concatenate((im, Result[:,self.rightCrop[1]:self.leftCrop[1]]), axis = 1)
+        else:
+            if self.leftCrop > self.rightCrop:
+                im = Result[:,self.rightCrop:self.leftCrop]
+            else:
+                im = Result[:,self.leftCrop:self.rightCrop]
+        im = im[:, int(im.shape[0]*0.1):int(im.shape[0]*0.9)]
+        b = np.mean(im)
+        a = np.mean(im, axis = 1)
+        # plt.plot(a,range(a.shape[0]))
+        # plt.imshow(im)
+        self.image_saver.append(im)        
         if self.purpose[2] == "show":
             plt.imshow(Result)
             plt.show()

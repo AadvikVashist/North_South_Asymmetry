@@ -1,5 +1,4 @@
 import os
-import os.path as path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,12 +9,16 @@ class if_sh_Figure:
         self.allDatasets = []
         self.NSA =[]
         self.NS_Flux_Ratio = []
+        self.dev = []
         self.directory = directory
         self.Tdataset = Tdataset
         self.shiftDegree = shiftDegree
         self.wavelengths()
         self.createFigureFolder()
         self.createFileFolder()
+        for self.i in Tdataset:
+            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+
     def createFigureFolder(self):
         folderPath = self.directory[0] + "/" + self.directory[8][0]
         if not os.path.exists(folderPath):
@@ -36,6 +39,11 @@ class if_sh_Figure:
             rowOne = rowOne.tolist()
             row = rowOne.index(i[0])
             self.dates.append(date[row,2])
+    def datasetRead(self, x):
+        self.data = np.array(pd.read_csv(x, header = None))
+        self.NSA.append(((self.data[0])[1:-1]).astype(np.float64))
+        self.NS_Flux_Ratio.append(((self.data[2])[1:-1]).astype(np.float64))
+        self.dev.append(((self.data[1])[1:-1]).astype(np.float64))
     def aIF(self, title, xLabel, yLabel, bands, size, cMap, axisFontSize, titleFontSize,legendLocation, legendFontSize, lineWidth, dataPointStyle, lineStyles, grid, cmapMin = 0, cmapMax = 1):
         self.wavelengths()
         self.datasetDates()
@@ -478,6 +486,133 @@ class if_sh_Figure:
                     cColor+=1
             plt.legend(fontsize = 20, frameon = False)
             figures.append(fig)
-            plt.figtext(0.5,0.9, str(self.wavelength[bands[band]]) +"µm" , fontsize = 24)
+            string_wavelength = str(np.around(self.wavelength[bands[band]], 3))
+            while len(str(string_wavelength.split(".")[1])) < 3:
+                string_wavelength+="0"
+            plt.figtext(0.5,0.9, string_wavelength +"µm" , fontsize = 24)
+            plt.show()
+        return figures
+    def hIF(self):
+        self.IFScale()
+        for i in self.allDatasets:
+            self.datasetRead(i)
+        #prime mission (TA, T8, T31)
+        prime = [0,1,2]
+        #equinox mission (61,62,67, 79,85)
+        equinox = [3,5,7]
+        #solstice mission (92,108,114,278,283) -> (85,108,114)
+        solstice = [9,11,12]
+        datasets = [prime,equinox,solstice]
+        yLabel = "Latitude (°)"
+        xLabel = "I/F"
+        bands = [27, 89]
+        size = [16  ,32]
+        cMap = "tab10"
+        axisFontSize = 9
+        label = 24
+        tickFontSize = 4
+        titleFontSize = 20
+        legendFontSize = 10
+        lineWidth = 4
+        dataPointStyle = "."
+        lineStyles = ["solid", "solid","solid"]
+        grid = 2
+        cmapMin = 0.2
+        cmapMax = .8
+        self.wavelengths()
+        self.datasetDates()
+        purpose = ["if_sh",bands, ""]
+        plt.rcParams["font.family"] = 'monospace'
+        plt.rcParams["font.weight"] = 'light'
+        yTicks = range(-90, 91, 30)
+        xTicks = np.arange(0,0.08, 0.015)
+        cMap = plt.cm.get_cmap(cMap)
+        numColors = (len(solstice))
+        colors = [(.75,0.1,0,1), (0,.75,0,1), (0,0.5,1,1)]
+        # try:
+        #     colors = np.arange(cmapMin,(cmapMax+((cmapMax-cmapMin)/(9))),(cmapMax-cmapMin)/(9))
+        # except:
+        #     colors = [cmapMax for i in range(len(self.Tdataset))]
+        # colors = np.flip(colors)
+        figures = []
+        yTick = [str(i) + "°N" if i >= 0 else str(abs(i)) + "°S" for i in list(yTicks)]
+        try:
+            try:
+                a = yTick.index("0.0°N")
+            except:
+                a = yTick.index("0°N")
+            yTick[a] = "0°"
+        except:
+            pass
+        colors = np.arange(0,1.1,1/9)
+        for band in range(len(bands)):
+            cColor = 0
+            fig = plt.figure(figsize = size)
+            plt.xlabel(xLabel, size = label)
+            plt.ylabel(yLabel, size = label)
+            plt.xlim(min(xTicks),max(xTicks))
+            plt.ylim(min(yTicks),max(yTicks))
+            plt.xticks(xTicks,fontsize=26)
+            plt.yticks(ticks = yTicks, labels = yTick,fontsize=26)
+            saver = []
+            count = 0
+            for mission in datasets:
+                scales= [i[0] for i in self.ifScale]
+                for d in range(len(mission)):
+                    dataset = mission[d]
+                    currentDataset = data(self.directory,self.Tdataset[dataset], self.shiftDegree, purpose)
+                    y = currentDataset.if_sh[band][0]
+                    x = currentDataset.if_sh[band][1]
+                    saver.extend(currentDataset.image_saver)
+                    if self.Tdataset[dataset][0] in scales:
+                        cData = scales.index(self.Tdataset[dataset][0])
+                        if dataset == 7:
+                            x = x[14::]
+                            y = y[14::]
+                            scalar = self.ifScale[cData][1][band]
+                            x /=scalar
+                        elif dataset == 2:
+                            x = x[0:320]
+                            y = y[0:320]
+                            scalar = self.ifScale[cData][1][band]
+                            x /=scalar
+                        elif dataset == 11:
+                            x *=self.ifScale[cData][1][band]/255
+                            x = x[0:230]
+                            y = y[0:230]
+                        elif dataset == 12:
+                            x *=self.ifScale[cData-1][1][band]/255
+                            x = x[0:168]
+                            y = y[0:168]
+                            print(max(x), min(x))
+                        else:
+                            x /=self.ifScale[cData][1][band]
+                        print(band,self.Tdataset[dataset][0] )
+                    else:
+                        print(self.Tdataset[dataset][0])
+                    if np.min(x) < 0.001:
+                        x = x
+                    error_y = self.NSA[cData][band]
+                    closest = min(range(len(y)), key=lambda x: abs(y[x]- error_y))
+                    error_x = x[closest]
+                    plt.plot(x,y, lw = lineWidth, linestyle = lineStyles[band], color = cMap(colors[count]), label = self.Tdataset[dataset][0], solid_capstyle="butt")
+                    count+=1
+                    plt.errorbar(error_x,error_y,self.dev[cData][band],ecolor = (1,0,0,1), elinewidth = 3, capsize = 5, capthick = 2)
+
+                    #plt.plot((0,0),(-100,100), lw = 1, color = (0,0,0), linestyle = '--')
+                    # if min(y) > -89:
+                    #     plt.plot((x[-1]-0.0005, x[-1]+0.0005),(y[-1],y[-1]), color = (0,0,0,1), lw = 2)
+                    # if max(y) < 89:
+                    #     plt.plot((x[0]-0.00005, x[0]+0.0005),(y[0],y[0]), color = (0,0,0,1), lw = 2)
+                    cColor+=1
+            plt.legend(fontsize = 20, frameon = False)
+            figures.append(fig)
+            string_wavelength = str(np.around(self.wavelength[bands[band]], 3))
+            while len(str(string_wavelength.split(".")[1])) < 3:
+                string_wavelength+="0"
+            plt.figtext(0.5,0.9, string_wavelength +"µm" , fontsize = 24)
+            plt.show()
+        for i in saver:
+            plt.imshow(i)
             plt.show()
         return figures

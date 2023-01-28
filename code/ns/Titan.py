@@ -5,11 +5,12 @@ from if_sh_figure import if_sh_Figure
 from print import printDatasets
 from tif import tif
 from tilt import Tilt
+from nsb import Boundary
 import numpy as np
 import time
 import subprocess, os, platform
 class Titan:
-    def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
+    def __init__(self, directory = ['/Users/aadvik/Desktop/NASA/North_South_Assymetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True,  info = []):
         self.directory = directory
         self.datasets = [dataset[0] for dataset in datasets]
         self.datasetsNSA = datasets
@@ -40,6 +41,8 @@ class Titan:
             self.tif()
         elif self.purpose[0] == "stats":
             self.stats()
+        elif self.purpose[0] == "figure" and self.purpose[1] == "nsb":
+            self.fig9()
     def getData(self):
         for i in range(len(self.datasets)):
             if self.which == "All":
@@ -84,9 +87,12 @@ class Titan:
         elif self.information == 5:
             figure = x.fIF()
             self.saveFig(figure, "fIF", 2)
-        elif self.information >= 6:
+        elif self.information == 6:
             figure = x.gIF()
             self.saveFig(figure, "gIF", 2)  
+        elif self.information >= 7:
+            figure = x.hIF()
+            self.saveFig(figure, "hIF", 2) 
     def fig6(self):
         x = NS_Flux_Ratio(self.directory, self.datasetsNSA, self.shiftDegree)
         if self.information == 0:
@@ -107,9 +113,12 @@ class Titan:
         elif self.information == 5:
             figure = x.fNS_Flux()
             self.saveFig(figure, "fNS_Flux", 3)
-        elif self.information >= 6:
+        elif self.information == 6:
             figure = x.gNS_Flux()
             self.saveFig(figure, "gNS_Flux", 3)
+        elif self.information >= 7:
+            figure = x.hNS_Flux()
+            self.saveFig(figure, "hNS_Flux", 3)
     def fig8(self):
         x = Tilt(self.directory, self.datasetsNSA, self.shiftDegree)
         if self.information == 0:
@@ -127,6 +136,11 @@ class Titan:
         elif self.information >= 4:
             figure = x.eTiltPlot()
             self.saveFig(figure, "eTiltPlot", 4)
+    def fig9(self):
+        x = Boundary(self.directory, self.datasetsNSA, self.shiftDegree)
+        if self.information >= 1:
+            figure = x.a_boundary()
+            self.saveFig(figure, "a_nsb", 3)
     def printCSV(self):
         printDatasets(self.directory, self.datasets, self.purpose)
     def tif(self):

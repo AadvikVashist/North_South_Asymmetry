@@ -491,7 +491,7 @@ class NS_Flux_Ratio:
         count = 0; labels = []
         for i in range(len(datasets)):
             mission = datasets[i]
-            axs[i].text(.36,1.35, Seasons[i], fontsize = 20)
+            axs[i].text(.36,1.32, Seasons[i], fontsize = 20)
             axs[i].minorticks_on()
             if i == 0:             
                 axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')
@@ -525,6 +525,145 @@ class NS_Flux_Ratio:
         lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
         plt.subplots_adjust(right = .8, hspace = 0.12)
         fig.legend(lines, labels, fontsize = legendFontSize, loc = legendLocation, frameon = False, edgecolor = 'black', bbox_to_anchor = (1,0.2,0,0))
+        
+        fig.text(0.055, 0.5, yLabel, va='center', rotation='vertical', size = axisFontSize*1.25)
+        plt.show()
+        return fig           
+    def hNS_Flux(self):
+        #prime mission (TA, T8, T31)
+        prime = [0,1,2]
+        #equinox mission (61,62,67, 79,85)
+        equinox = [3,5,7]
+        #solstice mission (92,108,114,278,283) -> (85,108,114)
+        solstice = [9,11,12]
+        datasets = [prime,equinox,solstice]
+        xLabel = "Wavelength (µm)"
+        yLabel = "North/South Flux Ratio"
+        size = [16,24]
+        xLim = [0.35,1.05]
+        xTicks = [0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05]
+        yLim = [0.65,1.45]
+        Seasons = ["Northern Fall", "Northern Winter", " Northern Spring", "Northern Summer"]
+        cmapMin = 0.1
+        cmapMax = 1
+        cMap = "tab10"
+        darken = 1
+        axisFontSize = 20
+        titleFontSize = 20
+        legendLocation = "center left"
+        legendFontSize = 15
+        ticksize = 16
+        datasetSize = 10;dataPointStyle = ",";lineStyles = ["solid", "solid", "solid"]; lineWidth = 2
+        grid = 1
+        subplotName = [[0.075,0.94],[0.075,0.85],[0.075,0.76],[0.075,0.94],[0.075,0.85],[0.075,0.76],[0.075,0.94],[0.075,0.85],[0.075,0.76],[0.075,0.94],[0.075,0.85],[0.075,0.76]]
+        self.datasetDates()
+        
+        yTicker = np.round(np.arange(yLim[0],yLim[1]+0.2,0.2),3)
+        
+        for i in self.allDatasets:
+            self.datasetRead(i)
+        plt.rcParams["font.family"] = 'times'
+        plt.rcParams["font.weight"] = 'light'
+        yTickCount = 5; yTicks = np.arange(yLim[0], yLim[1]+(yLim[1]-yLim[0])/yTickCount,(yLim[1]-yLim[0])/yTickCount)
+        cMap = plt.cm.get_cmap(cMap)
+        colors = np.arange(0,1.2,1/9)
+        # try:
+        #     colors = np.arange(cmapMin,(cmapMax+((cmapMax-cmapMin)/12)),(cmapMax-cmapMin)/12)
+        # except: 
+        #     colors = [cmapMax for i in range(len(self.Tdataset))]
+        fig, axs = plt.subplots(nrows = 4, ncols = grid, sharex='all', sharey='all', squeeze = False, figsize = size)  
+        fig.tight_layout(pad = 2, rect =(0,1.5,1,1))
+        fig.subplots_adjust(top=.85, hspace = 0.2, left = 0.12, right = 0.2)
+        axs = axs.ravel()
+        print(cMap(colors[0]))
+        count = 0; labels = []
+        
+        import extract_data
+        lorenz = extract_data.get_lorenz_data()
+        lorenz_color = plt.cm.get_cmap("twilight")
+        i = 0
+        mission = datasets[i]
+        axs[i].text(.36,1.32, Seasons[i], fontsize = 20)
+        axs[i].minorticks_on()
+        if i == 0:             
+            axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')
+            axs[i].xaxis.set_label_position('top')
+            # axs[i].set_xlabel(xLabel, size = axisFontSize)
+            axs[i].minorticks_on()
+        else:
+            axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=False)
+        axs[i].yaxis.set_tick_params(labelleft=True)
+        axs[i].set_yticks(ticks = yTicker)
+        axs[i].set_yticklabels(labels = yTicker,fontsize = ticksize)
+        axs[i].set_xticks(ticks = xTicks)
+        axs[i].set_xticklabels(labels = xTicks, fontsize = ticksize)
+        mission = list(lorenz.keys())
+        axs[i].plot([-1000,1000], [1,1], color = (1,0,0,0.5), linewidth = lineWidth, linestyle = 'dashed') 
+        lorenz_labels = []
+        for index, (key,value) in enumerate(lorenz.items()):
+            if index > 0:
+                x = [x/1000 for x in value[0]]
+                y = value[1]
+                a = axs[i].plot(x, y, color = ((lorenz_color(index/5+0.1))[0],(lorenz_color(index/5+0.1))[1],(lorenz_color(index/5+0.1))[2],1), linewidth=lineWidth, marker = dataPointStyle, label=("HST" + ' - ' +  key))
+                #xs[i].text(*subplotName[count], (self.Tdataset[x][0] + ' - ' + self.dates[x]), horizontalalignment='center', verticalalignment='center', transform=axs[i].transAxes, size = datasetSize)
+                axs[i].set_xlim(xLim)
+                axs[i].set_ylim(yLim)
+                labels.append(a)
+                #axs[i].legend()
+                # axs[i].plot([x[0],x[0]],[y[0]-0.04,y[0]+0.04],color = (1,0,0,1),linewidth = 2)
+                # axs[i].plot([x[-1],x[-1]],[y[-1]-0.04,y[-1]+0.04],color = (1,0,0,1), linewidth = 2)
+                lorenz_labels = axs[i].get_legend_handles_labels()
+
+        
+        #others
+        
+        
+        for i in range(1,len(datasets)+1):
+            mission = datasets[i-1]
+            axs[i].text(.36,1.32, Seasons[i], fontsize = 20)
+            axs[i].minorticks_on()
+            if i == 0:             
+                axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')
+                axs[i].xaxis.set_label_position('top')
+                # axs[i].set_xlabel(xLabel, size = axisFontSize)
+                axs[i].minorticks_on()
+            elif i == 3:
+                axs[i].xaxis.set_tick_params(labelbottom=True, labeltop =False)
+                axs[i].xaxis.set_label_position('bottom') 
+                axs[i].set_xlabel(xLabel, size = axisFontSize)
+            else:
+                axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=False)
+            axs[i].yaxis.set_tick_params(labelleft=True)
+            axs[i].set_yticks(ticks = yTicker)
+            axs[i].set_yticklabels(labels = yTicker,fontsize = ticksize)
+            axs[i].set_xticks(ticks = xTicks)
+            axs[i].set_xticklabels(labels = xTicks, fontsize = ticksize)
+            axs[i].plot([-1000,1000], [1,1], color = (1,0,0,0.5), linewidth = lineWidth, linestyle = 'dashed')         
+            for x in mission:
+                flyby = self.Tdataset[x][0]
+                if count == 2:
+                    a = axs[i].plot(self.wavelength, self.NS_Flux_Ratio[x], color = (0.1,0.8,0.2,1), linewidth=lineWidth, marker = dataPointStyle, label=(self.Tdataset[x][0] + ' - ' + self.dates[x]))
+                elif count == 1:
+                    a = axs[i].plot(self.wavelength, self.NS_Flux_Ratio[x], color = ((cMap(colors[count]))[0]*0.5,(cMap(colors[count]))[1]*0.5,(cMap(colors[count]))[2]*0.5,1), linewidth=lineWidth, marker = dataPointStyle, label=(self.Tdataset[x][0] + ' - ' + self.dates[x]))
+
+                else:
+                    a = axs[i].plot(self.wavelength, self.NS_Flux_Ratio[x], color = ((cMap(colors[count]))[0]*darken,(cMap(colors[count]))[1]*darken,(cMap(colors[count]))[2]*darken,1), linewidth=lineWidth, marker = dataPointStyle, label=(self.Tdataset[x][0] + ' - ' + self.dates[x]))
+                #xs[i].text(*subplotName[count], (self.Tdataset[x][0] + ' - ' + self.dates[x]), horizontalalignment='center', verticalalignment='center', transform=axs[i].transAxes, size = datasetSize)
+                axs[i].set_xlim(xLim)
+                axs[i].set_ylim(yLim)
+                labels.append(a)
+                #axs[i].legend()
+                count+=1
+            lines_labels = axs[i].get_legend_handles_labels()
+            lines, labels = lines_labels
+            axs[i].legend(lines, labels, fontsize = legendFontSize, loc = legendLocation, frameon = False, edgecolor = 'black', bbox_to_anchor = (1.0,0.25,0.6,0.4))
+        lines, labels = lorenz_labels
+        axs[0].legend(lines, labels, fontsize = legendFontSize, loc = legendLocation, frameon = False, edgecolor = 'black', bbox_to_anchor = (1.0,0.25,0.6,0.4))
+        axs[0].text(1.06,0.65, "(Lorenz et al. 2004)", size = 18)
+        #lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+        #lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+        plt.subplots_adjust(right = .8, hspace = 0.12)
+        # fig.legend(lines, labels, fontsize = legendFontSize, loc = legendLocation, frameon = False, edgecolor = 'black', bbox_to_anchor = (1,0.2,0,0))
         
         fig.text(0.055, 0.5, yLabel, va='center', rotation='vertical', size = axisFontSize*1.25)
         plt.show()
