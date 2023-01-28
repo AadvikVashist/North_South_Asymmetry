@@ -186,7 +186,7 @@ class Tilt:
         return function, a, ys, V
     def image(self, datasets, band):  
         datasets = datasets[0]
-        currentfiles = [self.directory[0] + '/' + datasets + '/' + self.directory[3] + '/' + e for e in os.listdir(self.directory[0] + '/' + datasets + '/' + self.directory[3])][band]
+        currentfiles = sorted([self.directory[0] + '/' + datasets + '/' + self.directory[3] + '/' + e for e in os.listdir(self.directory[0] + '/' + datasets + '/' + self.directory[3])])[band]
         try: #open image arrays
             im = plt.imread(currentfiles)[:,:,0]
         except:
@@ -203,8 +203,8 @@ class Tilt:
             lineWidth = 2
             dataPointStyle = ','
             angle = ["The NSA is located at ", "°S with an angle of "]
-            tiltDatasets = [3, 5]
-            bands = [74,89]
+            tiltDatasets = [5]
+            bands = [73,89]
             size = [16,16]
             self.wavelengths()
             for i in self.allDatasets:
@@ -292,12 +292,8 @@ class Tilt:
             xLabel = 'Longitude (°)'
             yLabel = 'North South Boundary Latitude (°)'
             axisFontSize = 15
-            Title = "Axis Tilt of NSA found in the "
-            titleFontSize = 12
             tickSize = 15
             lineWidth = 2
-            dataPointStyle = ','
-            angle = ["The NSA is located at ", "°S with an angle of "]
             tiltDatasets = [3, 5]
             bands = [74,89]
             size = [16,16]
@@ -316,7 +312,7 @@ class Tilt:
             yTick = [str(i) + "°N" if i >= 0 else str(abs(i)) + "°S" for i in list(yTicks)] 
             xTicks = [-180,-120,-60,0,60,120,180]
             xTick = ["0°E","60°E","120°E","180°","120°W","60°W","0°W"]
-            # xTick = [str(i) + "°E" if i >= 0 else str(abs(i)) + "°W" for i in list(xTick)] 
+            t67 = ["/Users/aadvik/Downloads/t67_repeat/0.png","/Users/aadvik/Downloads/t67_repeat/1.png"]
             try:
                 try: 
                     a = yTick.index("0.0°N")
@@ -329,10 +325,11 @@ class Tilt:
                 dataTdataset = self.Tdataset[tiltDatasets[i]]
                 a = data(self.directory, dataTdataset, self.shiftDegree, purpose) #columns,lon,lats
                 for currentBand in range(len(bands)):
+                    print(self.Tdataset[tiltDatasets[i]][0], self.wavelength[bands[currentBand]])
                     plt.rcParams["font.family"] = 'monospace'
                     plt.rcParams["font.weight"] = 'light'
                     #get image with band
-                    images = self.image(dataTdataset, currentBand)
+                    images = self.image(dataTdataset, bands[currentBand])
                     imageA = images[:,[*range(columnRange[0],columnRange[1])]]
                     imageB = images[:,[*range(columnRange[2],columnRange[3])]]
                     croppedImage = np.concatenate((imageA,imageB), axis = 1)
@@ -372,25 +369,20 @@ class Tilt:
                     #show image band
                     plt.imshow(np.flip(images, axis = 1), cmap = 'Greys', extent = (-180,180,-90,90))
                     #ticks
+                    try: #open image arrays
+                        images = plt.imread(t67[currentBand])[:,:,0]
+                    except:
+                        images = plt.imread(t67[currentBand])[:,:]
+                    plt.imshow(np.flip(images, axis = 0), cmap = 'Greys_r', extent = (-180,180,-90,90))
+
+                    print("angle is " , self.angle(np.sqrt(g[0][0])))
                     plt.xticks(ticks = xTicks, labels = xTick, size = tickSize*1.25)
                     plt.yticks(ticks = yTicks, labels = yTick, size = tickSize*1.25)
-                    print(self.angle(np.sqrt(g[0][0])))
-                    plt.figtext(0.5,0.75, "The NSA is located at "  + str(round(self.NSA[i][currentBand],3)) + "°S ± " + str(round(self.dev[i][currentBand],3)) + " with an angle of " + str(round(self.angle(d[0]),3)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(self.wavelength[bands[currentBand]]) + "µm", size = 14, horizontalalignment='center')
+                    
+                    # plt.figtext(0.51,0.8, "The NSA is located at "  + str(round(self.NSA[i][currentBand],1)) + "°S ± " + str(round(self.dev[i][currentBand],1)) + " with an angle of " + str(round(self.angle(d[0]),1)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(np.round(self.wavelength[bands[currentBand]],3)) + "µm", size = 19, color = (1,1,1,1), horizontalalignment='center')
                     plt.xlabel(xLabel, fontsize = axisFontSize);plt.ylabel(yLabel, fontsize = axisFontSize)
-                    """if len(tiltDatasets) > 1:
-                        title = Title + self.Tdataset[tiltDatasets[i]][0] + " dataset at wavelength " + str(self.wavelength[74]) + 'µm'
-                        plt.title(title, fontsize = titleFontSize*1.25)
-                    else:
-                        plt.title(Title, fontsize = titleFontSize*1.25)
-                    plt.plot(xPlot, yPlot, linewidth=lineWidth, marker = dataPointStyle, color = (0,0,0,1))
-                    plt.plot(xPlot, yLine, linewidth=lineWidth, marker = dataPointStyle, color = (1,0,0,1))
-                    plt.figtext(0.5,0.18, angle[0] + str(self.NSA[i][currentBand]) + angle[1] + str(self.angle(a.band[0][3][0])) + "°", size =15, horizontalalignment='center')
-                    plt.ylim(-30,30)
-                    print(str(a.band[currentBand][5]))
-                    plt.grid(axis = 'y')
-                    plt.show() 
-                    """
-                    plt.show()
+                    
+                    # plt.show()
                     figures.append(fig)
                 print("new")
             return figures

@@ -5,6 +5,7 @@ from if_sh_figure import if_sh_Figure
 from print import printDatasets
 from tif import tif
 from tilt import Tilt
+from nsb import Boundary
 import numpy as np
 import time
 import subprocess, os, platform
@@ -43,12 +44,15 @@ class Titan:
             self.fig8()
         elif self.purpose[0] == "figure" and self.purpose[1] == "show":
             self.openFig()
+        elif self.purpose[0] == "figure" and self.purpose[1] == "nsb":
+            self.fig9()
         elif self.purpose[0] == "print":
             self.printCSV()
         elif self.purpose[0] == "tif":
             self.tif()
         elif self.purpose[0] == "stats":
             self.stats()
+    
     def getData(self):
         for i in range(len(self.flyby_names)):
             if self.which == "All" or self.which == "all":
@@ -93,9 +97,12 @@ class Titan:
         elif self.information == 5:
             figure = x.fIF()
             self.saveFig(figure, "fIF", 2)
-        elif self.information >= 6:
+        elif self.information == 6:
             figure = x.gIF()
             self.saveFig(figure, "gIF", 2)  
+        elif self.information >= 7:
+            figure = x.hIF()
+            self.saveFig(figure, "hIF", 2)
     def fig6(self):
         x = NS_Flux_Ratio(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
@@ -113,12 +120,12 @@ class Titan:
         elif self.information == 4:
             figure = x.eNS_Flux()
             self.saveFig(figure, "eNS_Flux", 3)
-        elif self.information == 5:
-            figure = x.fNS_Flux()
-            self.saveFig(figure, "fNS_Flux", 3)
-        elif self.information >= 6:
+        elif self.information == 6:
             figure = x.gNS_Flux()
             self.saveFig(figure, "gNS_Flux", 3)
+        elif self.information >= 7:
+            figure = x.hNS_Flux()
+            self.saveFig(figure, "hNS_Flux", 3)
     def fig8(self):
         x = Tilt(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
@@ -136,6 +143,12 @@ class Titan:
         elif self.information >= 4:
             figure = x.eTiltPlot()
             self.saveFig(figure, "eTiltPlot", 4)
+    def fig9(self):
+        x = Boundary(self.directory, self.datasetsNSA, self.shiftDegree)
+        if self.information >= 1:
+            figure = x.a_boundary()
+            self.saveFig(figure, "aNSB", 5)
+
     def printCSV(self):
         printDatasets(self.directory, self.flyby_names, self.purpose)
     def tif(self):
@@ -243,11 +256,5 @@ class Titan:
                     x+=1
                 sum+=x
         print("files:", str(fileCount), "\nfunctions in all files:", str(methodSum), "\nlines in all files:", str(sum), '\ncharacters in all files:', str(characterCount)) 
-#input purpose here. List must be length 3.
-#Titan(purpose = ["figure", "comparison"], info = 0, whichDatasets = "all")
-#Titan(purpose = ["figure", "if"], info = 0, whichDatasets = "all")
-#Titan(purpose = ["figure", "flux"], info = 0, whichDatasets = "all")
-#Titan(purpose = ["figure", "tilt"], info = 0, whichDatasets = "all")]
-abcdefg =time.time()
-x = Titan(purpose = ["data","show"], info = 100, whichDatasets = "all")
-print(time.time() - abcdefg)
+if __name__ == "__main__":
+    x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = "All")

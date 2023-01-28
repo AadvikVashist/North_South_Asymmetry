@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 import time
 import math
 from sklearn.metrics import r2_score
-import PIL
+import cv2
 class data:   
     def __init__(self, directory, datasetName, shiftDegree , purpose):
         #create all class paths,directories, and variables
@@ -97,12 +97,11 @@ class data:
         else:
             self.leftCrop =  min(range(len(self.lon[0, :])), key=lambda x:abs(self.lon[0, x] - self.leftCrop))
             self.rightCrop =  min(range(len(self.lon[0, :])), key=lambda x:abs(self.lon[0, x]-self.rightCrop))
-        if "Ti" in self.flyby:
+        if self.flyby == "T278Ti" or  self.flyby == "T283Ti" :
             self.subset = tuple([(self.columnLat > self.goalNSA -30) & (self.columnLat < self.goalNSA + 30.0)])
         else:
             self.subset = tuple([(self.columnLat > self.goalNSA -15) & (self.columnLat < self.goalNSA + 15.0)])
         self.lat_sh = self.columnLat[self.subset] ## subset HC band b/t 30°S to 0°N 
-        self.lon_sh = self.lon[self.subset]
         latRange = np.nanmax(self.lat)-np.nanmin(self.lat)
         latTicks = len(self.lat)/latRange
         self.shiftDegree=shiftDegree
@@ -250,6 +249,13 @@ class data:
             self.dataAnalysis()
             print("dataset", self.flyby, "     image", "%02d" % (self.iter),"     boundary",format(self.NSA[self.iter],'.15f') ,"      deviation", format(self.deviation[self.iter],'.15f'), "        N/S",format(self.NS[self.iter],'.10f') )
         #write data
+        if "datasetAverage" in self.purpose[1]:
+            datasetAverage = self.averages([self.NSA, np.std(self.NSA), self.NS])
+            print("\n\n\n\n\n\n\n\n\n\n\n")
+            for i in range(5):
+                print("dataset", self.flyby,"                   boundary",format(datasetAverage[0],'.15f') ,"      deviation", format(datasetAverage[1],'.15f'), "        N/S",format(datasetAverage[2],'.10f') )
+                time.sleep(0.25)
+
         if "write" in self.purpose[1]:
             #create folder and file
             self.createFolder()
@@ -323,52 +329,99 @@ class data:
             self.im = plt.imread(self.currentFile)[:,:,0]
         except:
             self.im = plt.imread(self.currentFile)[:,:]
-        self.im = self.im.astype(np.int16)
+        self.im = self.im.astype(np.float32)
         hc_band = np.empty((self.height, self.width), float)
         nsa_lats = []; nsa_lons = []; cols = []
         latRange = np.max(self.lat)-np.min(self.lat)
         latTicks = len(self.lat)/latRange
         #get latitude values of each pixel using CSV
         width = []
-        subtraction = (np.insert(self.im, 0, np.array(self.num_of_nans*[[0]*self.width]), axis = 0) - np.concatenate((self.im,self.num_of_nans*[[0]*self.width])))
-        hc_band = subtraction[int(np.round(self.num_of_nans/2, 0)):-1*int(np.round(self.num_of_nans/2, 0))]
-        if True:
-            self.createFolder(os.path.join(self.masterDirectory,self.flyby,"hc_band"))
-            self.convert_array_to_image(hc_band, os.path.join(self.masterDirectory,self.flyby,"hc_band", (os.path.splitext(os.path.relpath(self.currentFile,os.path.join(self.masterDirectory,self.flyby,self.directoryList["flyby_image_directory"])))[0] +  "_band")))
-        if_sh = hc_band[self.subset]
-        lon_subset = []
-        if type(self.leftCrop) is list:
-            a =  sorted((self.rightCrop[0],self.leftCrop[0]))
-            b =  sorted((self.rightCrop[1],self.leftCrop[1]))
-            lon_subset = np.concatenate((range(*a), range(*b)))
-        else:
-            if self.leftCrop > self.rightCrop:
-                lon_subset = range(self.rightCrop,self.leftCrop)
-            else:
-                lon_subset = range(self.leftCrop,self.rightCrop)
+        showPlot = "y"
         for col in range(self.width):
-            if col in lon_subset:
-                columnHC = hc_band[:,col]
-                if_sh = columnHC[self.subset] ## subset HC band b/t 30°S to 0°N 
-                if np.min(if_sh) != np.max(if_sh):
-                    try:
-                        popt, _ = curve_fit(self.poly6, self.lat_sh, if_sh)#apply sextic regression to data
-                        poptD = self.poly6Derivative(*popt)#get derivative of sextic regression
-                        derivativeRoot = np.roots(poptD) #roots (Real and imaginary) of derivative function
-                        realDerivativeRoots = derivativeRoot[np.isreal(derivativeRoot)] #remove extraneous soulutions (imaginary)
-                        drIndex = min(range(len(realDerivativeRoots)), key=lambda x: abs(realDerivativeRoots[x]-self.goalNSA)) #find value closest to NSA
-                        derivativeRoots = realDerivativeRoots[drIndex]
-                        if abs(derivativeRoots.real-self.goalNSA) >= self.errorMargin:
-                            width.append(False)
-                        else: 
-                            nsa_lats.append(derivativeRoots.real)
-                            width.append(True)
-                    except:
+            # if 
+            subtraction = (np.insert(self.im[:,col], [0]*self.num_of_nans, self.nans) - np.concatenate((self.im[:,col], self.nans)))
+            hc_band[:,col] = subtraction[int(self.num_of_nans/2):int(-self.num_of_nans/2)]
+            #hc_band[crop[0]:crop[1],crop[2]:crop[3]]
+            columnHC = hc_band[:,col]
+            if_sh = columnHC[self.subset] ## subset HC band b/t 30°S to 0°N 
+            #lat_sh = self.columnLat[self.subset]  ## subset HC band b/t 30°S to 0°N 
+            self.lon_sh = self.lon[:,col][self.subset]  ## subset HC band b/t 30°S to 0°N 
+            if np.min(if_sh) != np.max(if_sh):
+                try:
+                    popt, _ = curve_fit(self.poly6, self.lat_sh, if_sh)#apply sextic regression to data
+                    #print(np.mean(if_sh))
+                    poptD = self.poly6Derivative(*popt)#get derivative of sextic regression
+                    derivativeRoot = np.roots(poptD) #roots (Real and imaginary) of derivative function
+                    realDerivativeRoots = derivativeRoot[np.isreal(derivativeRoot)] #remove extraneous soulutions (imaginary)
+                    drIndex = min(range(len(realDerivativeRoots)), key=lambda x: abs(realDerivativeRoots[x]-self.goalNSA)) #find value closest to NSA
+                    derivativeRoots = realDerivativeRoots[drIndex]
+                    if abs(derivativeRoots.real-self.goalNSA) >= self.goalOutlier:
                         width.append(False)
+                    else: 
+                        nsa_lats.append(derivativeRoots.real)
+                        width.append(True)
+                    if self.play and abs(derivativeRoots.real - self.goalNSA) > self.purpose[2]: ##show bad columns
+                        if not showPlot == False:
+                            showPlot = input("continue? ")
+                            if showPlot == "":
+                                plt.figure(figsize =(8,8))
+                                x = self.flyby + " Band: " + str(self.iter) + "      column " + str(col) + "/" + str(self.width)
+                                plt.title(x)
+                                plt.plot(self.lat_sh, if_sh, label = 'brightness')
+                                plt.xlabel('latitude');plt.ylabel('I/F')
+                                plt.plot(self.lat_sh, self.poly6(self.lat_sh, *popt), label = 'sextic regression')
+                                plt.plot(self.lat_sh, self.poly6Prime(self.lat_sh, *popt), label = 'sextic derivative')  
+                                plt.plot([-30,-20,-10, 0], [0,0,0,0], label = 'y = 0')
+                                plt.scatter(derivativeRoots.real,0 , label = 'NSA' )
+                                plt.legend()
+                                plt.show(block=False)
+                                plt.pause(2)
+                                plt.close()
+                            else:
+                                showPlot = False
+                except:
+                    width.append(False)
             else:
                 width.append(False)
+        if "showNSA" in self.purpose[1]:
+            zipped_lists = zip(self.lon[0,width],nsa_lats)
+            sorted_pairs = sorted(zipped_lists)
+            tuples = zip(*sorted_pairs)
+            list1, list2 = [ list(tuple) for tuple in  tuples]  
+            plt.plot(list1, list2)
+            plt.ylim([np.mean(list2)-10, np.mean(list2)+10])
+            plt.show(block=False)
+            plt.pause(1)
+            plt.close()
+        if "showShift" in self.purpose[1] and self.iter == 0:
+            plt.imshow(hc_band, vmin = -20, vmax = 20)
+            plt.show()
+            a  = self.subset[0]
+            ifPlot = hc_band[a,:]
+            plt.imshow(ifPlot, vmin = -20, vmax = 20)
+            plt.show()
+        if "showIf" in self.purpose[1]:
+            plt.imshow(self.im)
+            plt.show()
+            plt.imshow(hc_band)
+            plt.show()
+            a  = self.subset[0]
+            ifPlot = hc_band[a,:]
+            plt.imshow(ifPlot)
+            plt.show()
         self.NSA_Analysis(nsa_lats, self.im,width)
-        print(time.time() - self.a)
+        if "showError" in self.purpose[1] and abs(self.NSA[-1] - self.goalNSA) > self.purpose[2]:  
+            if self.play == True:
+                self.play = False
+            else:
+                for i in nsa_lats:
+                    print(i)
+                self.play = True
+                plt.imshow(self.im)
+                plt.show()
+                plt.imshow(hc_band)
+                plt.show()
+                self.dataAnalysis()
     def ifAnalysis(self):
         #open image arrays
         try:
@@ -383,19 +436,40 @@ class data:
         image = self.im[non_zero, :]
         crop = self.im[non_zero, :]
         ab = self.lat[non_zero,0]
-        Result = image[:,~np.any(crop == 0, axis = 0)]
-        try:
-            b = Result[int(len(Result)*0.25):int(len(Result)*0.75), int(len(Result[0])*0.25):int(len(Result[0])*0.75)]
-        except:
-            try:
-                self.im = plt.imread(self.currentFile)[:,:,0]
-            except:
-                self.im = plt.imread(self.currentFile)[:,:]
-            b = 0
-        b = np.mean(b)*10
-        a = np.mean(Result, axis = 1)
-        ab = ab[abs(a)<abs(b)]
-        a = a[abs(a)<abs(b)]
+        Result = self.im[non_zero, :]
+        ab = self.lat[non_zero,0]
+        # try:
+        #     b = Result[int(len(Result)*0.25):int(len(Result)*0.75), int(len(Result[0])*0.25):int(len(Result[0])*0.75)]
+        # except:
+        #     try:
+        #         self.im = plt.imread(self.currentFile)[:,:,0]
+        #     except:
+        #         self.im = plt.imread(self.currentFile)[:,:]
+        #     plt.imshow(self.im)
+        #     plt.show()
+        #     b = 0
+        if type(self.leftCrop) is list:
+            im = Result[:,self.rightCrop[0]:self.leftCrop[0]]
+            im = np.concatenate((im, Result[:,self.rightCrop[1]:self.leftCrop[1]]), axis = 1)
+        else:
+            if self.leftCrop > self.rightCrop:
+                im = Result[:,self.rightCrop:self.leftCrop]
+            else:
+                im = Result[:,self.leftCrop:self.rightCrop]
+        im = im[:, int(im.shape[0]*0.1):int(im.shape[0]*0.9)]
+        b = np.mean(im)
+        a = np.mean(im, axis = 1)
+        # plt.plot(a,range(a.shape[0]))
+        # plt.imshow(im)
+        self.image_saver.append(im)        
+        if self.purpose[2] == "show":
+            plt.imshow(Result)
+            plt.show()
+            plt.title(self.flyby + " band: " + str(self.iter)) 
+            plt.xlabel("latitude")
+            plt.ylabel("interface")
+            plt.plot(ab, a, marker = ".")
+            plt.show()
         return [ab, a]
     def smooth(self, y, box_pts):
         box = np.ones(box_pts)/box_pts
@@ -419,7 +493,40 @@ class data:
                     nsa_lats.append(x)
                     lon_shTilt.append(self.lon[0,col])
                     columns.append(col)
-                
+            """""
+            combo = 5
+            movingAverageList = self.running_mean(nsa_lats, combo) 
+            """""
+            """""
+            xy = list(zip(lon_shTilt, nsa_lats))     
+            sorted_pairs = sorted(xy)
+            tuples = zip(*sorted_pairs)
+            lon_shTilt, nsa_lats = [ list(tuple) for tuple in  tuples]
+            """""
+            #function, angle, r_squared = self.NSATilt(lon_shTilt, self.smooth(nsa_lats,self.purpose[4]))
+            if "showTilt" in self.purpose[3]:
+                print("showingTilt")
+                plt.plot(lon_shTilt, nsa_lats, color = 'r', label = "raw",  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,5), color = 'g', label = "5" ,  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,10), color = 'b', label = "10",  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,10), color = 'b', label = "10",  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,15), color = 'k', label = "15",  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,15), color = 'k', label = "15",  linewidth = 1)
+                plt.legend()
+                plt.show()
+                plt.plot(lon_shTilt, self.smooth(nsa_lats,20), color = 'm', label = "20",  linewidth = 1)
+                plt.legend()
+                plt.show()
             self.band.append([columns, lon_shTilt, self.smooth(nsa_lats,self.purpose[4])])
     def linearRegress(self, x, y):
         return np.polyfit(x,y,1)
@@ -445,9 +552,9 @@ class data:
         average = np.nanmean(im_nsa_lat) #standard average
         combo = 4
         movingAverageList = self.running_mean(im_nsa_lat, combo) #moving average
-        # if "showAverage" in self.purpose[1]:
-        #     plt.plot(range(len(movingAverageList)),movingAverageList)
-        #     plt.show()
+        if "showAverage" in self.purpose[1]:
+            plt.plot(range(len(movingAverageList)),movingAverageList)
+            plt.show()
         movingAvg = np.mean(movingAverageList) #moving average
         diff = self.brightnessDifference(image, movingAvg) #difference between north and south
         self.NSA.append(movingAvg)
@@ -473,30 +580,44 @@ class data:
             return derivativeRoots.real
         except:
             return None
-    def convert_array_to_image(self, array, savename):
-        if array is not np.array:
-            array = np.array(array, dtype=np.float32)
-        else:
-            array.astype(np.uint8)
-        quintiles = np.quantile(array,np.arange(0,1.01,0.01))
-        # quintile_range = [quintiles[i]-quintiles[i-1] for i in range(4,len(quintiles-3))]
-        # min = 0
-        # max = 0
-    
-        min = quintiles[15]
-        max = quintiles[-16]
         
-        
-        # plt.imshow(array)
-        # plt.show()
-        if min != 0:
-            array -= min
-        max = max-min
-        array = np.clip(array, 0, max)
-        ranges = np.ptp(array)
-        if ranges != 255:
-            array *= 255 / ranges
-        array.astype(np.int8)
-        im = PIL.Image.fromarray(array)
-        im = im.convert("L")
-        im.save(savename+ ".png")
+    def analysis(self):
+        #open image arrays
+        try:
+            self.im = plt.imread(self.currentFile)[:,:,0]
+        except:
+            self.im = plt.imread(self.currentFile)[:,:]
+        self.im = self.im.astype(np.float32)
+        self.hc_band = np.empty((self.height, self.width), float)
+        nsa_lats = []; nsa_lons = []; cols = []
+        #get latitude values of each pixel using CSV
+        if self.purpose[0] == "data":
+            for col in range(self.width):
+                x = self.columnAnalysis(col)
+                if x != None:
+                    nsa_lats.append(x)
+            self.NSA_Analysis(nsa_lats, self.im)
+        elif self.purpose[0] == "tilt" and self.iter in self.purpose[1]:
+            columns = []
+            lon_shTilt = []
+            for col in range(*self.purpose[2]):
+                x = self.columnAnalysis(col)
+                if x != None:
+                    nsa_lats.append(x)
+                    lon_shTilt.append(self.lon[0,col])
+                    columns.append(col)
+            function, angle, r_squared = self.NSATilt(lon_shTilt, nsa_lats)
+            self.band.append([columns, lon_shTilt, nsa_lats])
+        elif self.purpose[0] == "if_sh":
+            if self.purpose[1] <= 1:
+                self.purpose[1] = int(self.purpose[1] * self.width)
+            else:
+                column = self.purpose[1]
+            while True:
+                try:
+                    ifs = self.if_sh_data(self.purpose[1])
+                    break
+                except:
+                    self.purpose[1] +=1 
+                    print(self.purpose[1])
+            self.if_sh.append(ifs)
