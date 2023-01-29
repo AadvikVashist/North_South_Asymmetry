@@ -18,24 +18,24 @@ class data:
         self.analysisPrep(shiftDegree)
         #gets purpose condition and executes individual operations based on purpose
         self.conditionals()
-    def createDirectories(self, directory, dataset): #create all file directory paths
+    def createDirectories(self, directory, flyby): #create all file directory paths
         #basic datasets
         self.directoryList = directory
-        self.image_saver = []
-        self.flyby = dataset[0]
-        self.masterDirectory = self.directoryList[0]
-        self.csvFolder = self.directoryList[2]
-        self.tFolder = self.directoryList[0] + "/" + dataset[0]
-        self.imageFolder = self.directoryList[0] + "/" + dataset[0] + "/" + self.directoryList[3]
+        self.flyby = flyby[0]
+        self.masterDirectory = self.directoryList["flyby_parent_directory"]
+        self.csvFolder = self.directoryList["flyby_data"]
+        self.tFolder = os.path.join(self.directoryList["flyby_parent_directory"], self.flyby)
+        self.imageFolder =  os.path.join(self.directoryList["flyby_parent_directory"], self.flyby, self.directoryList["flyby_image_directory"])
         #finding files
         try:
-            self.csvFile = [self.tFolder + '/' + self.csvFolder + '/' + file for file in os.listdir(self.tFolder + '/' + self.csvFolder)]
+            self.csvFile = [os.path.join(self.tFolder, self.csvFolder, file) for file in os.listdir(os.path.join(self.tFolder,self.csvFolder))]
             if len(self.csvFile) == 1:
                 self.csvFile = self.csvFile[0]
         except:
             print("no csv file found")
-        self.allFiles = [self.imageFolder + '/' + e for e in os.listdir(self.imageFolder)]
-        self.resultsFolder = self.masterDirectory+ "/" + self.directoryList[7] + "/"
+        self.allFiles = [ os.path.join(self.imageFolder,e) for e in os.listdir(self.imageFolder)]
+        self.resultsFolder = os.path.join(self.masterDirectory, self.directoryList["analysis_folder"])
+        self.flyby_bg_info =  os.path.join(self.masterDirectory,self.directoryList["flyby_info"])
         if len(self.allFiles) != 96:
             print("missing 1+ files")
     def createLists(self, purpose, NSA): #create global variables for data
@@ -46,8 +46,8 @@ class data:
         self.lat = []
         self.lon = []
         self.iterations = []
-        self.goalNSA = NSA[1]
-        self.goalOutlier = NSA[2]
+        self.goalNSA  = NSA[1]
+        self.errorMargin = NSA[2]
         self.leftCrop = NSA[3][0]
         self.rightCrop = NSA[3][1]
         self.purpose = purpose
@@ -109,8 +109,9 @@ class data:
         self.nans = [np.nan]*(self.num_of_nans)
         if self.purpose[0] == "if_sh":
             self.ifSubset = tuple([(self.columnLat > -90.0) & (self.columnLat < 90.0)])
-    def createFolder(self):
-        folderPath = self.masterDirectory + "/" + self.directoryList[7] + "/"
+    def createFolder(self, folderPath = None):
+        if not folderPath:
+            folderPath = os.path.join(self.masterDirectory,self.directoryList["analysis_folder"])
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
@@ -240,19 +241,21 @@ class data:
             self.getIf_shControl()
         else:
             print("data output type not understood; ", self.purpose[0], " not valid")
-    def getDataControl(self):
+    def getDataControl(self): #iteration over images within flyby
         for self.iter in range(len(self.allFiles)):
+            self.a = time.time()
             self.currentFile = self.allFiles[self.iter]
             self.iterations.append(self.iter)
             self.dataAnalysis()
             print("dataset", self.flyby, "     image", "%02d" % (self.iter),"     boundary",format(self.NSA[self.iter],'.15f') ,"      deviation", format(self.deviation[self.iter],'.15f'), "        N/S",format(self.NS[self.iter],'.10f') )
+        #write data
         if "datasetAverage" in self.purpose[1]:
             datasetAverage = self.averages([self.NSA, np.std(self.NSA), self.NS])
             print("\n\n\n\n\n\n\n\n\n\n\n")
             for i in range(5):
                 print("dataset", self.flyby,"                   boundary",format(datasetAverage[0],'.15f') ,"      deviation", format(datasetAverage[1],'.15f'), "        N/S",format(datasetAverage[2],'.10f') )
                 time.sleep(0.25)
-        #write data
+
         if "write" in self.purpose[1]:
             #create folder and file
             self.createFolder()
@@ -306,12 +309,6 @@ class data:
         northSplit = min(range(len(self.lat[:, 0])), key=lambda x:abs(self.lat[x,0]-verticalSample-nsaLat))
         southSplit = min(range(len(self.lat[:, 0])), key=lambda x:abs(self.lat[x,0]+verticalSample-nsaLat))
         
-        #horizontalCrop = range(int(len(im[0])/horizontalSample),(horizontalSample-1)*int(len(im[0])/horizontalSample))
-        #north = im[northSplit:splitY,horizontalCrop]
-        #south = im[(splitY+1):southSplit, horizontalCrop]
-        #self.visualizeBrightnessDifferenceSamplingArea(im,[northSplit, splitY, southSplit, horizontalCrop], nsaLat) 
-        #north = im[northSplit:splitY,int(3*self.width/8):int(5*self.width/8)]
-        #south = im[(splitY+1):southSplit,int(3*self.width/8):int(5*self.width/8)]
         if type(self.leftCrop) is list:
             north = im[northSplit:splitY,self.rightCrop[0]:self.leftCrop[0]]
             south = im[(splitY+1):southSplit,self.rightCrop[0]:self.leftCrop[0]]
@@ -324,7 +321,6 @@ class data:
             else:
                 north = im[northSplit:splitY,self.leftCrop:self.rightCrop]
                 south = im[(splitY+1):southSplit,self.leftCrop:self.rightCrop]
-        #self.visualizeBrightnessDifferenceSamplingArea(im,[northSplit, splitY, southSplit], nsaLat) 
         northM = np.mean(north[north != 0.])
         southM = np.mean(south[south != 0.])
         return northM/southM
@@ -529,7 +525,6 @@ class data:
                 plt.plot(lon_shTilt, self.smooth(nsa_lats,20), color = 'm', label = "20",  linewidth = 1)
                 plt.legend()
                 plt.show()
-                
             self.band.append([columns, lon_shTilt, self.smooth(nsa_lats,self.purpose[4])])
     def linearRegress(self, x, y):
         return np.polyfit(x,y,1)
@@ -571,6 +566,7 @@ class data:
         if_sh = columnHC[self.subset] ## subset HC band b/t 30°S to 0°N 
         #lat_sh = self.columnLat[self.subset]  ## subset HC band b/t 30°S to 0°N 
         self.lon_sh = self.lon[:,column][self.subset]  ## subset HC band b/t 30°S to 0°N 
+        
         try:
             popt, _ = curve_fit(self.poly6, self.lat_sh, if_sh)#apply sextic regression to data
             poptD = self.poly6Derivative(*popt)#get derivative of sextic regression
@@ -582,6 +578,7 @@ class data:
             return derivativeRoots.real
         except:
             return None
+        
     def analysis(self):
         #open image arrays
         try:

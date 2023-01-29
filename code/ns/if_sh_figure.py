@@ -463,7 +463,7 @@ class if_sh_Figure:
                             x = x[14::]
                             y = y[14::]
                             x /=self.ifScale[cData][1][band]
-                        if dataset == 11:
+                        elif dataset == 11:
                             x *=self.ifScale[cData][1][band]/255
                             x = x[0:240]
                             y = y[0:240]

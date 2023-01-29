@@ -205,8 +205,8 @@ class Tilt:
             lineWidth = 2
             dataPointStyle = ','
             angle = ["The NSA is located at ", "°S with an angle of "]
-            tiltDatasets = [3, 5]
-            bands = [74,89]
+            tiltDatasets = [5]
+            bands = [73,89]
             size = [16,16]
             self.wavelengths()
             for i in self.allDatasets:
@@ -294,14 +294,10 @@ class Tilt:
             xLabel = 'Longitude (°)'
             yLabel = 'North South Boundary Latitude (°)'
             axisFontSize = 15
-            Title = "Axis Tilt of NSA found in the "
-            titleFontSize = 12
             tickSize = 15
             lineWidth = 2
-            dataPointStyle = ','
-            angle = ["The NSA is located at ", "°S with an angle of "]
-            tiltDatasets = [5]
-            bands = [73,89]
+            tiltDatasets = [3, 5]
+            bands = [74,89]
             size = [16,16]
             self.wavelengths()
             for i in self.allDatasets:
@@ -319,8 +315,6 @@ class Tilt:
             xTicks = [-180,-120,-60,0,60,120,180]
             xTick = ["0°E","60°E","120°E","180°","120°W","60°W","0°W"]
             t67 = ["/Users/aadvik/Downloads/t67_repeat/0.png","/Users/aadvik/Downloads/t67_repeat/1.png"]
-
-            # xTick = [str(i) + "°E" if i >= 0 else str(abs(i)) + "°W" for i in list(xTick)] 
             try:
                 try: 
                     a = yTick.index("0.0°N")
