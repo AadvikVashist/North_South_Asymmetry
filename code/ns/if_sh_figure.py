@@ -17,23 +17,23 @@ class if_sh_Figure:
         self.createFigureFolder()
         self.createFileFolder()
         for self.i in Tdataset:
-            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+            self.allDatasets.append(os.path.join(self.directory["flyby_parent_directory"], self.directory["analysis_folder"], self.i[0] + self.directory["analysis"]).replace("\\","/"))
 
     def createFigureFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["figures"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def createFileFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][2]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["if"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def wavelengths(self):
-        self.wavelength = (np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[4], header = None)))[0]
+        self.wavelength = (np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["wavelength_data"]).replace("\\","/"), header = None)))[0]
     def datasetDates(self):
         self.dates = []
-        date = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[6], header = None))
+        date = np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["flyby_info"]).replace("\\","/"), header = None))
         for i in self.Tdataset:
             rowOne = date[:, 0]
             rowOne = rowOne.tolist()
@@ -135,7 +135,7 @@ class if_sh_Figure:
         xLabel = "Latitude"
         yLabel = "I/F"
         bands = [0, 47, 95]
-        size = [16,39]
+        size = [16,16]
         cMap = "viridis"
         axisFontSize = 9
         tickFontSize = 4
@@ -196,7 +196,7 @@ class if_sh_Figure:
         xLabel = "Latitude"
         yLabel = "I/F"
         bands = [0, 47, 95]
-        size = [16,32]
+        size = [16,16]
         cMap = "viridis"
         axisFontSize = 9
         label = 12
@@ -265,7 +265,7 @@ class if_sh_Figure:
         xLabel = "Latitude (°)"
         yLabel = "I/F"
         bands = [0, 47, 95]
-        size = [16,32]
+        size = [16,16]
         cMap = "Greys"
         axisFontSize = 9
         label = 12
@@ -312,7 +312,7 @@ class if_sh_Figure:
     def IFScale(self):
         self.ifScale = []
         scales = [["Ta", [725,361]],["T8", [725,361]], ["T31", [725,361]], ["T61", [725,361]], ["T62", [133,125]], ["T67", [725,361]], ["T79", [725,361]],["T85",[725,361]], ["T92", [725,361]], ["T108", [725,361]], ["T114", [363,181]], ["278TI",[724,361]], ["283TI",[724,361]]]
-        ifs = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[10], header = None), dtype=object)
+        ifs = np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["if_scalars"]).replace("\\","/"), header = None), dtype=object)
         for i in range(len(ifs)):
             self.ifScale.append((scales[i][0], list(ifs[i][:])))
     def fIF(self):
@@ -327,7 +327,7 @@ class if_sh_Figure:
         yLabel = "Latitude (°)"
         xLabel = "I/F"
         bands = [0, 47, 95]
-        size = [16,32]
+        size = [16,16]
         cMap = "Greys"
         axisFontSize = 9
         label = 16
@@ -403,7 +403,7 @@ class if_sh_Figure:
         yLabel = "Latitude"
         xLabel = "I/F"
         bands = [27, 89]
-        size = [16  ,32];
+        size = [16,16]
         cMap = "gist_ncar"
         axisFontSize = 9
         label = 24
@@ -506,7 +506,7 @@ class if_sh_Figure:
         yLabel = "Latitude (°)"
         xLabel = "I/F"
         bands = [27, 89]
-        size = [16  ,32]
+        size = [14,10]
         cMap = "tab10"
         axisFontSize = 9
         label = 24
@@ -522,8 +522,6 @@ class if_sh_Figure:
         self.wavelengths()
         self.datasetDates()
         purpose = ["if_sh",bands, ""]
-        plt.rcParams["font.family"] = 'monospace'
-        plt.rcParams["font.weight"] = 'light'
         yTicks = range(-90, 91, 30)
         xTicks = np.arange(0,0.08, 0.015)
         cMap = plt.cm.get_cmap(cMap)
@@ -548,6 +546,9 @@ class if_sh_Figure:
         for band in range(len(bands)):
             cColor = 0
             fig = plt.figure(figsize = size)
+            plt.rcParams["font.family"] = 'monospace'
+            plt.rcParams["font.weight"] = 'light'
+
             plt.xlabel(xLabel, size = label)
             plt.ylabel(yLabel, size = label)
             plt.xlim(min(xTicks),max(xTicks))
@@ -612,7 +613,5 @@ class if_sh_Figure:
                 string_wavelength+="0"
             plt.figtext(0.5,0.9, string_wavelength +"µm" , fontsize = 24)
             plt.show()
-        for i in saver:
-            plt.imshow(i)
-            plt.show()
+            plt.close()
         return figures

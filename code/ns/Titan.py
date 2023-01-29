@@ -11,7 +11,7 @@ import time
 import subprocess, os, platform
 # def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets = [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15, [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True, info = []):
 class Titan:
-    def __init__(self, directory = {"flyby_parent_directory" : 'C:/Users/aadvi/Desktop/North_South_Asymmetry/Data',"flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : ['Figures', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart']},
+    def __init__(self, directory = {"flyby_parent_directory" : 'C:/Users/aadvi/Desktop/North_South_Asymmetry/data', "wavelength_data": "titan_data/wavelength.csv", "flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "if_scalars" : 'titan_data/IFData.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : {"if" : 'Figures/IF', "flux" : 'Figures/NS_Flux_Ratio', "tilt" : 'Figures/Tilt', "flowchart" : 'Figures/Flowchart', "nsb" : 'Figures/North_South_Boundary', "figures"  : "Figures/"}, "lorenz_figure" : "titan_data/lorenz_2004/x.csv"},
                     shiftDegree = 6,
                     flybys =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],
                                 ['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],
@@ -263,4 +263,4 @@ class Titan:
                 sum+=x
         print("files:", str(fileCount), "\nfunctions in all files:", str(methodSum), "\nlines in all files:", str(sum), '\ncharacters in all files:', str(characterCount)) 
 if __name__ == "__main__":
-    x = Titan(purpose = ["figure","if"], info = 100, whichDatasets = "All")
+    x = Titan(purpose = ["figure","flux"], info = 100, whichDatasets = "All")

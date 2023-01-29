@@ -19,27 +19,29 @@ class NS_Flux_Ratio:
         self.createFigureFolder()
         self.createFileFolder()
         for self.i in Tdataset:
-            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+            self.allDatasets.append(os.path.join(self.directory["flyby_parent_directory"], self.directory["analysis_folder"], self.i[0] + self.directory["analysis"]).replace("\\","/"))
+
     def createFigureFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["figures"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
-        self.resultsFolder = folderPath    
+        self.resultsFolder = folderPath
     def createFileFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][3]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["if"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def wavelengths(self):
-        self.wavelength = (np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[4], header = None)))[0]
+        self.wavelength = (np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["wavelength_data"]).replace("\\","/"), header = None)))[0]
     def datasetDates(self):
         self.dates = []
-        date = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[6], header = None))
+        date = np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["flyby_info"]).replace("\\","/"), header = None))
         for i in self.Tdataset:
             rowOne = date[:, 0]
             rowOne = rowOne.tolist()
             row = rowOne.index(i[0])
             self.dates.append(date[row,2])
+
     def datasetRead(self, x):
         self.data = np.array(pd.read_csv(x, header = None))
         self.NSA.append(((self.data[0])[1:-1]).astype(np.float64))
@@ -542,7 +544,7 @@ class NS_Flux_Ratio:
         size = [16,24]
         xLim = [0.35,1.05]
         xTicks = [0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05]
-        yLim = [0.65,1.45]
+        yLim = [0.65,1.45] #checkck tihs
         Seasons = ["Northern Fall", "Northern Winter", " Northern Spring", "Northern Summer"]
         cmapMin = 0.1
         cmapMax = 1
@@ -579,7 +581,7 @@ class NS_Flux_Ratio:
         count = 0; labels = []
         
         import extract_data
-        lorenz = extract_data.get_lorenz_data()
+        lorenz = extract_data.get_lorenz_data(os.path.join(self.directory["flyby_parent_directory"], self.directory["lorenz_figure"]).replace("\\","/"))
         lorenz_color = plt.cm.get_cmap("twilight")
         i = 0
         mission = datasets[i]

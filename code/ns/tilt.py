@@ -21,26 +21,27 @@ class Tilt:
         self.createFigureFolder()
         self.createFileFolder()
         for self.i in Tdataset:
-            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+            self.allDatasets.append(os.path.join(self.directory["flyby_parent_directory"], self.directory["analysis_folder"], self.i[0] + self.directory["analysis"]).replace("\\","/"))
+
     def createFigureFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["figures"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
-        self.resultsFolder = folderPath    
+        self.resultsFolder = folderPath
     def createFileFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][4]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["if"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def wavelengths(self):
-        self.wavelength = (np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[4], header = None)))[0]
+        self.wavelength = (np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["wavelength_data"]).replace("\\","/"), header = None)))[0]
     def datasetDates(self):
         self.dates = []
-        date = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[6], header = None))
+        date = np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["flyby_info"]).replace("\\","/"), header = None))
         for i in self.Tdataset:
             rowOne = date[:, 0]
             rowOne = rowOne.tolist()
-            row = rowOne.index(i)
+            row = rowOne.index(i[0])
             self.dates.append(date[row,2])
     def datasetRead(self, x):
         self.data = np.array(pd.read_csv(x, header = None))
@@ -188,7 +189,7 @@ class Tilt:
         return function, a, ys, V
     def image(self, datasets, band):  
         datasets = datasets[0]
-        currentfiles = sorted([self.directory[0] + '/' + datasets + '/' + self.directory[3] + '/' + e for e in os.listdir(self.directory[0] + '/' + datasets + '/' + self.directory[3])])[band]
+        currentfiles = sorted([os.path.join(self.directory["flyby_parent_directory"], datasets, self.directory["flyby_image_directory"], e).replace("\\", "/") for e in os.listdir(os.path.join(self.directory["flyby_parent_directory"], datasets, self.directory["flyby_image_directory"]).replace("\\", "/"))])[band]
         try: #open image arrays
             im = plt.imread(currentfiles)[:,:,0]
         except:
@@ -314,7 +315,7 @@ class Tilt:
             yTick = [str(i) + "°N" if i >= 0 else str(abs(i)) + "°S" for i in list(yTicks)] 
             xTicks = [-180,-120,-60,0,60,120,180]
             xTick = ["0°E","60°E","120°E","180°","120°W","60°W","0°W"]
-            t67 = ["/Users/aadvik/Downloads/t67_repeat/0.png","/Users/aadvik/Downloads/t67_repeat/1.png"]
+            t67 = sorted([os.path.join(self.directory["flyby_parent_directory"], "T67", "tilt_figure", e).replace("\\", "/") for e in os.listdir(os.path.join(self.directory["flyby_parent_directory"], "T67", "tilt_figure").replace("\\", "/"))])
             try:
                 try: 
                     a = yTick.index("0.0°N")
@@ -327,7 +328,7 @@ class Tilt:
                 dataTdataset = self.Tdataset[tiltDatasets[i]]
                 a = data(self.directory, dataTdataset, self.shiftDegree, purpose) #columns,lon,lats
                 for currentBand in range(len(bands)):
-                    print(self.Tdataset[tiltDatasets[i]][0], self.wavelength[bands[currentBand]])
+                    print(self.Tdataset[tiltDatasets[i]][0], self.wavelength[bands[currentBand]],"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
                     plt.rcParams["font.family"] = 'monospace'
                     plt.rcParams["font.weight"] = 'light'
                     #get image with band
@@ -377,7 +378,7 @@ class Tilt:
                     # plt.figtext(0.51,0.8, "The NSA is located at "  + str(round(self.NSA[i][currentBand],1)) + "°S ± " + str(round(self.dev[i][currentBand],1)) + " with an angle of " + str(round(self.angle(d[0]),1)) + "°" + " in the " + dataTdataset[0] + " flyby at " + str(np.round(self.wavelength[bands[currentBand]],3)) + "µm", size = 19, color = (1,1,1,1), horizontalalignment='center')
                     plt.xlabel(xLabel, fontsize = axisFontSize);plt.ylabel(yLabel, fontsize = axisFontSize)
                     
-                    # plt.show()
+                    plt.show()
                     figures.append(fig)
                 print("new")
             return figures

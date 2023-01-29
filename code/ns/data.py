@@ -22,6 +22,7 @@ class data:
         #basic datasets
         self.directoryList = directory
         self.flyby = flyby[0]
+        self.image_saver = []
         self.masterDirectory = self.directoryList["flyby_parent_directory"]
         self.csvFolder = self.directoryList["flyby_data"]
         self.tFolder = os.path.join(self.directoryList["flyby_parent_directory"], self.flyby)

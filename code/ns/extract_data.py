@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-def get_lorenz_data():
-    csv =pd.read_csv("data/Titan Data/Lorenz_2004/x.csv")
+def get_lorenz_data(file_loc):
+    csv =pd.read_csv(file_loc)
     csv = csv = csv.to_dict()
     new_dict ={}
     for key in csv.keys():

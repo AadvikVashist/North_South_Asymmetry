@@ -19,22 +19,23 @@ class Boundary:
         self.createFigureFolder()
         self.createFileFolder()
         for self.i in Tdataset:
-            self.allDatasets.append((self.directory[0] + "/" + self.directory[7] + "/" + self.i[0] + self.directory[5]))
+            self.allDatasets.append(os.path.join(self.directory["flyby_parent_directory"], self.directory["analysis_folder"], self.i[0] + self.directory["analysis"]).replace("\\","/"))
+
     def createFigureFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["figures"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
-        self.resultsFolder = folderPath    
+        self.resultsFolder = folderPath
     def createFileFolder(self):
-        folderPath = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][3]
+        folderPath = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["if"]).replace("\\","/")
         if not os.path.exists(folderPath):
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def wavelengths(self):
-        self.wavelength = (np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[4], header = None)))[0]
+        self.wavelength = (np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["wavelength_data"]).replace("\\","/"), header = None)))[0]
     def datasetDates(self):
         self.dates = []
-        date = np.array(pd.read_csv(self.directory[0] + '/' + self.directory[1] + '/' + self.directory[6], header = None))
+        date = np.array(pd.read_csv(os.path.join(self.directory["flyby_parent_directory"], self.directory["flyby_info"]).replace("\\","/"), header = None))
         for i in self.Tdataset:
             rowOne = date[:, 0]
             rowOne = rowOne.tolist()
