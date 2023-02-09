@@ -9,7 +9,6 @@ from nsb import Boundary
 import numpy as np
 import time
 import subprocess, os, platform
-# def __init__(self, directory = ['C:/Users/aadvi/Desktop/North_South_Asymmetry/data', 'Titan Data', 'csv', 'vis.cyl', 'wavelength.csv','_analytics.csv', 'nsa_cubes_northernsummer.csv', 'Result', ['Figures', 'ComparisonToRoman', 'IF Subplots', 'NS Flux Ratio', 'Tilt', 'Flowchart'], 'roman.csv', 'IFData.csv'], shiftDegree = 6, datasets = [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],['T61', -12, 15,[-120,-300]],['T62', -12, 15, [79,247]],['T67', -12, 15, [-120,-300]],['T79', -10, 15, [60,240]],['T85', -10, 15, [60,240]],['T92', -5, 15, [100,280]],['T108', -0, 15, [100,280]],['T114', 0, 20, [60,240]],['278TI', 10, 25, [60,240]],['283TI', 10, 25, [60,240]]], purpose = ["if_sh", [71,72,73], "show"], whichDatasets = True, info = []):
 class Titan:
     def __init__(self, directory = {"flyby_parent_directory" : 'C:/Users/aadvi/Desktop/North_South_Asymmetry/data', "wavelength_data": "titan_data/wavelength.csv", "flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "if_scalars" : 'titan_data/IFData.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : {"if" : 'Figures/IF', "flux" : 'Figures/NS_Flux_Ratio', "tilt" : 'Figures/Tilt', "flowchart" : 'Figures/Flowchart', "nsb" : 'Figures/North_South_Boundary', "figures"  : "Figures/"}, "lorenz_figure" : "titan_data/lorenz_2004/x.csv"},
                     shiftDegree = 6,
@@ -81,82 +80,82 @@ class Titan:
         x = if_sh_Figure(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aIF(title = "Seasonal Evolution of Titan's Atmospheric Meridional Brightness Profile", xLabel = "Latitude", yLabel = "I/F", bands = [24,35,50], size = [16,16], cMap = "viridis", axisFontSize = 10, titleFontSize = 15, legendLocation = 4, legendFontSize = 6, lineWidth = 1, dataPointStyle = ".", lineStyles = ["solid", "solid", "solid"], grid = 1, cmapMin = 0, cmapMax = 1)
-            self.saveFig(figure, "aIF", 2)
+            self.saveFig(figure, "aIF", "if")
         elif self.information == 1:
             figure = x.bIF(title = "Seasonal Evolution of Titan's Atmospheric Meridional Brightness Profile", xLabel = "Latitude", yLabel = "I/F", bands = [24,35,50], size = [16,16], cMap = "viridis", axisFontSize = 10, titleFontSize = 15, legendLocation = 4, legendFontSize = 6, lineWidth = 1, dataPointStyle = ".", lineStyles = ["solid", "solid", "solid"], grid = 1, cmapMin = 0, cmapMax = 1)
-            self.saveFig(figure, "bIF", 2)
+            self.saveFig(figure, "bIF", "if")
         elif self.information == 2:
             figure = x.cIF()
-            self.saveFig(figure, "cIF", 2)
+            self.saveFig(figure, "cIF", "if")
         elif self.information == 3:
             figure = x.dIF()
-            self.saveFig(figure, "dIF", 2)
+            self.saveFig(figure, "dIF", "if")
         elif self.information == 4:
             figure = x.eIF()
-            self.saveFig(figure, "eIF", 2)    
+            self.saveFig(figure, "eIF", "if")    
         elif self.information == 5:
             figure = x.fIF()
-            self.saveFig(figure, "fIF", 2)
+            self.saveFig(figure, "fIF", "if")
         elif self.information == 6:
             figure = x.gIF()
-            self.saveFig(figure, "gIF", 2)  
+            self.saveFig(figure, "gIF", "if")  
         elif self.information >= 7:
             figure = x.hIF()
-            self.saveFig(figure, "hIF", 2)
+            self.saveFig(figure, "hIF", "if")
     def fig6(self):
         x = NS_Flux_Ratio(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aNS_Flux()
-            self.saveFig(figure, "aNS_Flux", 3)
+            self.saveFig(figure, "aNS_Flux", "flux")
         elif self.information == 1:
             figure = x.bNS_Flux()
-            self.saveFig(figure, "bNS_Flux", 3)
+            self.saveFig(figure, "bNS_Flux", "flux")
         elif self.information == 2:
             figure = x.cNS_Flux()
-            self.saveFig(figure, "cNS_Flux", 3)
+            self.saveFig(figure, "cNS_Flux", "flux")
         elif self.information == 3:
             figure = x.dNS_Flux()
-            self.saveFig(figure, "dNS_Flux", 3)
+            self.saveFig(figure, "dNS_Flux", "flux")
         elif self.information == 4:
             figure = x.eNS_Flux()
-            self.saveFig(figure, "eNS_Flux", 3)
+            self.saveFig(figure, "eNS_Flux", "flux")
         elif self.information == 5:
             figure = x.fNS_Flux()
-            self.saveFig(figure, "fNS_Flux", 3)
+            self.saveFig(figure, "fNS_Flux", "flux")
         elif self.information == 6:
             figure = x.gNS_Flux()
-            self.saveFig(figure, "gNS_Flux", 3)
+            self.saveFig(figure, "gNS_Flux", "flux")
         elif self.information >= 7:
             figure = x.hNS_Flux()
-            self.saveFig(figure, "hNS_Flux", 3)
+            self.saveFig(figure, "hNS_Flux", "flux")
         elif self.information >= 7:
             figure = x.hNS_Flux()
-            self.saveFig(figure, "hNS_Flux", 3)
+            self.saveFig(figure, "hNS_Flux", "flux")
     def fig8(self):
         x = Tilt(self.directory, self.flybydata, self.shiftDegree)
         if self.information == 0:
             figure = x.aTiltPlot()
-            self.saveFig(figure, "aTiltPlot", 4)
+            self.saveFig(figure, "aTiltPlot", "tilt")
         elif self.information == 1:
             figure = x.bTiltPlot()
-            self.saveFig(figure, "bTiltPlot", 4)
+            self.saveFig(figure, "bTiltPlot", "tilt")
         elif self.information == 2:
             figure = x.cTiltPlot()
-            self.saveFig(figure, "cTiltPlot", 4)
+            self.saveFig(figure, "cTiltPlot", "tilt")
         elif self.information == 3:
             figure = x.dTiltPlot()
-            self.saveFig(figure, "dTiltPlot", 4)   
+            self.saveFig(figure, "dTiltPlot", "tilt")
         elif self.information >= 4:
             figure = x.eTiltPlot()
-            self.saveFig(figure, "eTiltPlot", 4)
+            self.saveFig(figure, "eTiltPlot", "tilt")
     def fig9(self):
-        x = Boundary(self.directory, self.datasetsNSA, self.shiftDegree)
+        x = Boundary(self.directory, self.flybydata, self.shiftDegree)
         if self.information >= 1:
             figure = x.a_boundary()
             self.saveFig(figure, "aNSB", 5)
 
     def printCSV(self):
-        printDatasets(self.directory, self.flyby_names, self.purpose)
+        printDatasets(self.directory, self.flyby_names, self.which)
     def tif(self):
         tif()
     def saveFig(self, figure, name, figType):
@@ -166,13 +165,13 @@ class Titan:
             if type(figure) == list:
                 for i in range(len(figure)):
                     current_time = datetime.datetime.now(pytz.timezone('America/New_York')) 
-                    filename = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][figType] +  "/" + name + "_" + str(i) + "_" + (str(current_time.year) + "-" + str(current_time.month) + "-" + str(current_time.day) + "-" + str(current_time.hour) + "-" + str(current_time.minute) + "-" + str(current_time.second))
+                    filename = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"][figType], name + "_" + str(i) + "_" + (str(current_time.year) + "-" + str(current_time.month) + "-" + str(current_time.day) + "-" + str(current_time.hour) + "-" + str(current_time.minute) + "-" + str(current_time.second))).replace("\\","/")
                     print(filename)
                     figure[i].savefig((filename + ".svg"))
                     figure[i].savefig((filename + ".png"))
             else:  
                 current_time = datetime.datetime.now(pytz.timezone('America/New_York')) 
-                filename = self.directory[0] + "/" + self.directory[8][0] + "/" + self.directory[8][figType] +  "/" + name + "_" + (str(current_time.year) + "-" + str(current_time.month) + "-" + str(current_time.day) + "-" + str(current_time.hour) + "-" + str(current_time.minute) + "-" + str(current_time.second))
+                filename = os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"][figType], name + "_" + (str(current_time.year) + "-" + str(current_time.month) + "-" + str(current_time.day) + "-" + str(current_time.hour) + "-" + str(current_time.minute) + "-" + str(current_time.second))).replace("\\","/")
                 print((filename + ".svg"))
                 print((filename + ".png"))
                 figure.savefig((filename + ".svg"))
@@ -181,13 +180,12 @@ class Titan:
         import glob
         import os
         import webbrowser
-        folders = [self.directory[0] + "/" + self.directory[8][0] + "/" + x + "/" for x in self.directory[8]][1:5]
-        flowchartFolder = [self.directory[0] + "/" + self.directory[8][0] + "/" + x + "/*" for x in self.directory[8]][5]
+        folders = [os.path.join(self.directory["flyby_parent_directory"], self.directory["Figure names"]["figures"], x).replace("\\", "/") for x in os.listdir(os.path.join(self.directory["flyby_parent_directory"],self.directory["Figure names"]["figures"]).replace("\\", "/"))]
         inputx = input("type? ")
         if ".svg" not in inputx and ".png" not in inputx:
             self.openFig()
         try:
-            listFiles = [x + '*' + inputx for x in folders]
+            listFiles = [os.path.join(x,'*' + inputx).replace("\\","/") for x in folders]
             list_of_files = glob.glob(listFiles[0])
         except:
             print("try again")
@@ -231,23 +229,9 @@ class Titan:
             except:
                 print("error on folder", folders[folder])
                 pass
-        lists = glob.glob(flowchartFolder)
-        latest_file = (max(lists, key=os.path.getctime))
-        latest_file = os.path.abspath(latest_file)
-        print(latest_file)
-        try:
-            if platform.system() == 'Darwin':       # macOS
-                subprocess.call(('open', latest_file))
-            elif platform.system() == 'Windows':    # Windows
-                webbrowser.open_new_tab(latest_file) 
-            else:                                   # linux variants
-                subprocess.call(('xdg-open', latest_file))
-        except:
-            print("error on folder", folders[folder])
-            pass
     def stats(self):
-        folder = [_ for _ in os.listdir((self.directory[0])[0:-4] + '/Code/NS/') if _.endswith('.py')]
-        folder = [(self.directory[0])[0:-4] + '/Code/NS/' + x for x in folder ]
+        folder = [_ for _ in os.listdir(os.path.join('/'.join((self.directory["flyby_parent_directory"].replace("\\","/").split("/")[0:-1])), 'Code' , 'NS').replace("\\", "/")) if _.endswith('.py')]
+        folder = [os.path.join('/'.join((self.directory["flyby_parent_directory"].replace("\\","/").split("/")[0:-1])), 'Code' , 'NS', x).replace("\\", "/") for x in folder ]
         sum = 0
         methodSum = 0
         characterCount = 0
@@ -263,4 +247,4 @@ class Titan:
                 sum+=x
         print("files:", str(fileCount), "\nfunctions in all files:", str(methodSum), "\nlines in all files:", str(sum), '\ncharacters in all files:', str(characterCount)) 
 if __name__ == "__main__":
-    x = Titan(purpose = ["figure","flux"], info = 100, whichDatasets = "All")
+    x = Titan(purpose = ["figure", "flux"], info = 100, whichDatasets = "All")

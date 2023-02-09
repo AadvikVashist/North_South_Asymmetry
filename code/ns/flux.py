@@ -544,8 +544,9 @@ class NS_Flux_Ratio:
         size = [16,24]
         xLim = [0.35,1.05]
         xTicks = [0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05]
-        yLim = [0.65,1.45] #checkck tihs
+        yLim = [0.6,1.6] #checkck tihs
         Seasons = ["Northern Fall", "Northern Winter", " Northern Spring", "Northern Summer"]
+        Seas = [(.36,1.32), (.36,1.32),(.36,0.76), (.36,.76)]
         cmapMin = 0.1
         cmapMax = 1
         cMap = "tab10"
@@ -585,7 +586,7 @@ class NS_Flux_Ratio:
         lorenz_color = plt.cm.get_cmap("twilight")
         i = 0
         mission = datasets[i]
-        axs[i].text(.36,1.32, Seasons[i], fontsize = 20)
+        axs[i].text(*Seas[i], Seasons[i], fontsize = 20)
         axs[i].minorticks_on()
         if i == 0:             
             axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')
@@ -622,7 +623,7 @@ class NS_Flux_Ratio:
         
         for i in range(1,len(datasets)+1):
             mission = datasets[i-1]
-            axs[i].text(.36,1.32, Seasons[i], fontsize = 20)
+            axs[i].text(*Seas[i], Seasons[i], fontsize = 20)
             axs[i].minorticks_on()
             if i == 0:             
                 axs[i].xaxis.set_tick_params(labelbottom=False, labeltop=True, bottom =False, top = True, which = 'both')

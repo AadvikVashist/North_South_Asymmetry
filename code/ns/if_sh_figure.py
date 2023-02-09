@@ -606,6 +606,7 @@ class if_sh_Figure:
                     # if max(y) < 89:
                     #     plt.plot((x[0]-0.00005, x[0]+0.0005),(y[0],y[0]), color = (0,0,0,1), lw = 2)
                     cColor+=1
+            plt.errorbar(0.015,0,5,ecolor = (1,0,0,1), elinewidth = 5, capsize = 9, capthick = 3)
             plt.legend(fontsize = 20, frameon = False)
             figures.append(fig)
             string_wavelength = str(np.around(self.wavelength[bands[band]], 3))
