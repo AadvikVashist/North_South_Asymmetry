@@ -1,5 +1,7 @@
 import pickle
 import requests
+import collections
+collections.Callable = collections.abc.Callable
 from bs4 import BeautifulSoup
 import os
 import numpy as np
@@ -197,7 +199,7 @@ def analyze_folder_for_cube_info(folder_path,url):
 
     return cube_info
 
-def analyze_folder_for_visibility(folder_path,url):
+def analyze_folder_for_visibility(folder_path):
     results = []
     # iterate through all files in the folder
     a = os.walk(folder_path)
@@ -207,41 +209,138 @@ def analyze_folder_for_visibility(folder_path,url):
     file_sizes = [get_file_size(file) for file in walked]
     curr_size = 0
     total_size = sum(file_sizes)
-    cube = [url + os.path.splitext(filename.split('/')[-1])[0] for filename in walked]
-    cube_info = get_cubes_info(cube)
     for index, filename in enumerate(walked):
         image_path = filename
         image, x,y,radius, match_percentage = analyze_image_for_visibility(image_path)
-        curr_cube = [filename, image, x,y,radius, match_percentage]
-        curr_cube.extend(cube_info[index])
         results.append([filename, image, x,y,radius, match_percentage])
         curr_size += file_sizes[index]
         expected_time_function(start_time, index, length, curr_size, total_size)
-    return
+    return results
 def show_positive_results(results):
     for i in results:
         filename, image, x,y,radius, match_percentage = i
         if match_percentage == 1:
             cv2.imshow("image",image)
             cv2.waitKey(100)
-def write_results(results, csvFile, filepath):
-    arr = []
-    for i in results:
-        filename, image, x,y,radius, match_percentage = i
-        cube = filename.replace("//", "/").split('/')[-1]
-        flyby = [f for f in filename.replace("//", "/").split('/') if "TI" in f][0]
-        ' '.join([str(c) for c in csvFile[0]])
-        flyby_index = [index for index in range(csvFile.shape[0]) if flyby in ' '.join([str(c) for c in csvFile[index]])][0]
-        row = [cube, *csvFile[flyby_index][1::], match_percentage]
-        arr.append(row)
+
+def format_string(string):#function that gets rid of the extra spaces and \n's
+    string = string.replace(" \n ","|").replace("\n ","").replace("  ","").replace("  "," ").replace("||","|")
+
+    return string
+
+def analyze_cube_info_and_vis(cube,vis):
+    visbility = []
+    cube_indexes = [x[0][1] for x in cube[1]]
+    
+    for index,cuber in enumerate(vis):
+        file_loc = os.path.splitext(cuber[0].split('/')[-1])[0]
+        cuber = cuber[1::]
+        try:
+            data = cube[1][cube_indexes.index(file_loc)]
+            data = [format_string(dat[1]) for dat in data]
+            data.extend(cuber[1::])
+        except:
+            data = ["_"]*len(cube[1][0])
+            data.extend(cuber[1::])
+        visbility.append(data)
+    headers= [x[0] for x in cube[1][0]]; headers.extend(["x", "y", "radius", "percentage"])
+    return visbility, headers
+def write_results(results, filepath):
     with open(filepath, 'w', newline="") as f:
         # create the csv writer
         writer = csv.writer(f)
         # write a row to the csv file
-        for row in arr:
+        for row in results:
             writer.writerow(row)
     print("rows written")
 
+# import requests
+# from bs4 import BeautifulSoup
+# import pandas as pd
+# import os
+# import numpy as np
+# import time
+# import urllib.request
+# from pprint import pprint
+# from html_table_parser.parser import HTMLTableParser
+# from urllib.parse import urljoin
+# import urllib.parse
+# import csv
+# nantes_csv = pd.read_csv('C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/nantes.csv')
+# nantes_csv = np.array(nantes_csv)
+# folder = 'C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/'
+
+# targeted_flybys = [row for row in list(nantes_csv) if "|" in row[1]]
+# non_targeted_flybys = [row for row in list(nantes_csv) if "|" not in row[1]]
+# nantes_csv = nantes_csv
+
+# def url_get_contents(url):
+#     req = urllib.request.Request(url=url)
+#     f = urllib.request.urlopen(req)
+#     # reading contents of the website
+#     return f.read()
+# def parse_url(url):
+#     contents = url_get_contents(url).decode('utf-8')
+#     start = 0
+#     parsed_url = urllib.parse.urlparse(url)
+#     parsed_url = url[0:url.index(parsed_url.netloc)] + parsed_url.netloc
+#     # domain = '{uri.netloc}/'.format(uri=parsed_uri)
+#     ret_url = []
+#     flyby = url.split('/')[-1]
+#     while True:
+#         finded = contents.find("/cube/",start)
+#         if finded > -1:
+#             founded =  contents.find("/cube/", finded+20)
+#             content_str = contents[finded:founded]
+#             content = content_str.split("\n")
+#             if "missing-vis" not in content_str:
+#                 content = [cont for cont in content if "src" in cont][0]
+#                 content = content.replace("src=",""); content = content.replace('"','')
+#                 content = content.strip()
+#                 ret_url.append(content)
+#             start = founded
+#         else:
+#             break
+#     ret_url = ret_url[0:-2]
+#     return_filename = [flyby + "/" + ret.split('/')[-1] for ret in ret_url]
+#     url = [(parsed_url + '/' + '/'.join(ret[1::].split('xxx'))) for ret in ret_url]
+#     return return_filename, url
+# def download_image(url, filename=None):
+#     if filename is None:
+#         filename = url
+#     if not os.path.exists('/'.join(filename.split('/')[0:-1])):
+#         os.mkdir('/'.join(filename.split('/')[0:-1]))
+#     if not os.path.exists(filename):
+#         try:
+#             urllib.request.urlretrieve(url, filename)
+#         except:
+#             print(url, "did not work")
+# def save_and_download(urls, filenames, basepath):
+#     leng = len(urls)
+#     for index, url in enumerate(urls):
+#         if filenames[index][0] == "/":
+#             path = basepath + "/" + filenames[index][1::]
+#         else:
+#             path = basepath + "/" + filenames[index]
+#         print(index,  "/", leng, "  ", url, "downloaded")
+#         download_image(url,path )
+# # download the file and save it to a local file
+# filename = []
+# url = []
+# for targeted_flyby in non_targeted_flybys:
+#     ab,bc = parse_url(targeted_flyby[0])
+#     filename.extend(ab)
+#     url.extend(bc) 
+#     print("completed", targeted_flyby)
+# save_and_download(url,filename, "C:/Users/aadvi/Desktop/Base")
+# filename = []
+# url = []
+# for targeted_flyby in targeted_flybys:
+#     ab,bc = parse_url(targeted_flyby[0])
+#     filename.extend(ab)
+#     url.extend(bc) 
+#     print("completed", targeted_flyby)
+# save_and_download(url,filename, "C:/Users/aadvi/Desktop/Base")
 
 if __name__ == "__main__":  
     baseurl = 'https://vims.univ-nantes.fr'
@@ -274,13 +373,13 @@ if __name__ == "__main__":
     # # call the function on the parent folder to get the list of results
     if os.path.exists("code/VIMS Data Ingestion/data/cubes.pickle"):
         with open("code/VIMS Data Ingestion/data/cubes.pickle", "rb") as f:
-            results= pickle.load(f)
+            vis= pickle.load(f)
 
     else:
+        vis = analyze_folder_for_visibility(parent_folder)
         with open("code/VIMS Data Ingestion/data/cubes.pickle", "wb") as f:
             # Use pickle to dump the variable into the file
-            results = analyze_folder_for_visibility(parent_folder)
-            pickle.dump(results, f)
+            pickle.dump(vis, f)
 
     ##
     ##GET CUBE INFO
@@ -297,7 +396,9 @@ if __name__ == "__main__":
         with open("code/VIMS Data Ingestion/data/cube_info.pickle", "wb") as f:
             # Use pickle to dump the variable into the file
             pickle.dump(results, f)
+    arr = analyze_cube_info_and_vis(results,vis)
+    array = arr[0]
+    array.insert(0,arr[1])
+    # show_positive_results(vis) #show limb photos
     
-    show_positive_results(results) #show limb photos
-    write_results(results, nantes_csv, "data/flyby_info/nantes_cubes.csv")
-
+    write_results(array, "code/VIMS Data Ingestion/data/nantes_cubes.csv")

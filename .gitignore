@@ -6,3 +6,4 @@
 *.blg
 *.bbl
 *.aux
+code/VIMS Data Ingestion/data/cubes.pickle
