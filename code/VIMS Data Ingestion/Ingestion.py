@@ -15,14 +15,15 @@ import time
 import pandas as pd
 import csv
 import concurrent.futures
-
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from multiprocessing import Pool
 # for converting the parsed data in a
 # pandas dataframe
 def read_a_url(url):
     req = urllib.request.Request(url=url, headers={'User-Agent': 'Chrome/111.0.5563.111'})
     index = 0
     while True:
-        if index > 10:
+        if index > 5:
             return None
         try:
             f = urllib.request.urlopen(req)
@@ -91,15 +92,35 @@ def analyze_image_for_visibility(image_path):
     img = cv2.imread(image_path)
     # convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray_blurred = cv2.blur(gray, (2, 2))
+    gray_blurred = cv2.blur(gray, (9, 9))
+    gray_blurred = cv2.threshold(gray_blurred,50,225, cv2.THRESH_BINARY)[1]
     # detect circles in the image
     circles = cv2.HoughCircles(gray_blurred, 
         method = cv2.HOUGH_GRADIENT_ALT, dp = 1,minDist = 10, param1 = 60,
-        param2 = 0.7, minRadius= int(np.sqrt(img.shape[0]*img.shape[1])  / 3), 
-        maxRadius = int(np.mean((img.shape[0], img.shape[1]))/2))
+        param2 = 0.7, minRadius= int(np.sqrt(img.shape[0]*img.shape[1]) / 10), 
+        maxRadius = int(np.mean((img.shape[0], img.shape[1]))/1.5))
     percentage = 1.0
-    
-    if circles is not None:
+    if circles is None:
+        contours, hierarchy = cv2.findContours(gray_blurred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = list(contours)
+        if len(contours) > 1:
+            contour = sorted(contours, key=cv2.contourArea, reverse=True)[0]
+            g = np.zeros(gray_blurred.shape)
+            g = cv2.fillConvexPoly(g, contour, 255)
+            (x,y),radius = cv2.minEnclosingCircle(contour)
+            percentage = (np.sum(g)/255) / (radius**2*np.pi)
+        elif len(contours) == 0:
+            percentage = 0.0
+            x = -1
+            y = -1
+            radius = -1
+        else:
+            contour = contours[0]
+            g = np.zeros(gray_blurred.shape)
+            g = cv2.fillConvexPoly(g, contour, 255)
+            (x,y),radius = cv2.minEnclosingCircle(contour)
+            percentage = (np.sum(g)/255) / (radius**2*np.pi)
+    elif circles is not None:
         detected_circles = np.around(circles)
         detected_circles = detected_circles[0]
         pt = detected_circles[np.argmax(detected_circles[:,2])]
@@ -132,32 +153,7 @@ def analyze_image_for_visibility(image_path):
         abc= cv2.mean(gray, mask=mask)
         if abc[0] > 60:
             percentage = 0.0
-        else:
-            canny = cv2.Canny(img, 10,80)
-            canny = cv2.blur(canny, (5,5))
-            # kernel = np.ones((2,2),np.uint8)
-            # canny = cv2.dilate(canny,kernel,iterations = 5)
-            # kernel = np.ones((3,3),np.uint8)
-            # canny = cv2.dilate(canny,kernel,iterations = 1)
-            canny = [[255 if c > 0 else 0 for c in r] for r in canny ]
-            canny = np.array(canny, dtype=np.uint8)
-            cannys = cv2.cvtColor(canny, cv2.COLOR_GRAY2BGR)
-            plt.imshow(cv2.bitwise_and(img,cannys))
-            
-            contours, hierarchy = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            # plt.pause(0.1)
-            # plt.imshow(cannys)
-            # plt.pause(0.1)
-
-    else:
-        percentage = 0.0
-        x = -1
-        y = -1
-        radius = -1
-
     return img, x, y, radius, percentage
-
-
 
 def parse_url(url):
     html = read_a_url(url).decode('utf-8')
@@ -180,21 +176,22 @@ def work_parse_for_the_info_tables(urllist):
                 print(urllist[index], "passed time", str(end) + "/" + str(length / (index + 1) * end) + " seconds             ", end="/r")
             else:
                 continue
+            if len(p.tables) % 2 != 0 :
+                pause = 0 #
     return [p.tables], np.array(p.tables)
 def get_cubes_info(cube): #get Image mid-time, Sampling Mode, Exposure, Distance, Mean Resolution, Sub-spacecraft point, subsolar point, incidence, emergence, phase, and limb visible
     cube_info = work_parse_for_the_info_tables(cube)
     cub = cube_info[1]
-    cu = [cub[index] + cub[index+1] for index in range(0,len(cub),2)]
-    cube_info = [cube_info[0],cu]
     return cube_info
 def analyze_folder_for_cube_info(folder_path,url):
     results = []
     # iterate through all files in the folder
     a = os.walk(folder_path)
-    walked = [os.path.join(dp, f).replace("\\","/") for dp, dn, fn in os.walk(folder_path) for f in fn if any((f.endswith(".jpg"),f.endswith(".png"), f.endswith(".tif")))]
+    walked = [os.path.join(dp, f).replace(folder_path,"").replace("\\","/") for dp, dn, fn in os.walk(folder_path) for f in fn if any((f.endswith(".jpg"),f.endswith(".png"), f.endswith(".tif")))]
+    
     length = len(walked)
     start_time = time.time()
-    cube = [url + os.path.splitext(filename.split('/')[-1])[0] for filename in walked]
+    cube = [(url + os.path.splitext(filename.split('/')[-1])[0]) for filename in walked]
     cube_info = get_cubes_info(cube)
 
     return cube_info
@@ -203,7 +200,7 @@ def analyze_folder_for_visibility(folder_path):
     results = []
     # iterate through all files in the folder
     a = os.walk(folder_path)
-    walked = [os.path.join(dp, f).replace("\\","/") for dp, dn, fn in os.walk(folder_path) for f in fn if any((f.endswith(".jpg"),f.endswith(".png"), f.endswith(".tif")))]
+    walked = [os.path.join(dp, f).replace("//","/") for dp, dn, fn in os.walk(folder_path) for f in fn if any((f.endswith(".jpg"),f.endswith(".png"), f.endswith(".tif")))]
     length = len(walked)
     start_time = time.time()
     file_sizes = [get_file_size(file) for file in walked]
@@ -223,28 +220,96 @@ def show_positive_results(results):
             cv2.imshow("image",image)
             cv2.waitKey(100)
 
-def format_string(string):#function that gets rid of the extra spaces and \n's
-    string = string.replace(" \n ","|").replace("\n ","").replace("  ","").replace("  "," ").replace("||","|")
+def format_string(string):#function that gets rid of the extra spaces and /n's
+    string = string.replace("\n", "").replace("","")
+    new_string = string.replace("  ", " ").replace("|", " | ").strip()
+    new_string = " | ".join([x.strip() for x in new_string.split("|")])
+    return new_string
 
-    return string
+def parse_url(url):
+    contents = read_a_url(url).decode('utf-8')
+    start = 0
+    parsed_url = urllib.parse.urlparse(url)
+    parsed_url = url[0:url.index(parsed_url.netloc)] + parsed_url.netloc
+    # domain = '{uri.netloc}/'.format(uri=parsed_uri)
+    ret_url = []
+    flyby = url.split('/')[-1]
+    while True:
+        finded = contents.find("/cube/",start)
+        if finded > -1:
+            founded =  contents.find("/cube/", finded+20)
+            content_str = contents[finded:founded]
+            content = content_str.split("\n")
+            url_ = content[0].split('" title')[0]
+            src = content[3].strip().replace("src=","").replace('"','')
+            if "data/previews" in src:
+                ret_url.append(src)
+            start = founded
+        else:
+            break
+    return_filename = [flyby + "/" + ret.split('/')[-1] for ret in ret_url]
+    url = [(parsed_url + '/' + '/'.join(ret[1::].split('xxx'))) for ret in ret_url]
+    return return_filename, url
+
+def download_image(url, filename=None):
+    if filename is None:
+        filename = url
+    if not os.path.exists('/'.join(filename.split('/')[0:-1])):
+        os.mkdir('/'.join(filename.split('/')[0:-1]))
+    if not os.path.exists(filename):
+        try:
+            urllib.request.urlretrieve(url, filename)
+        except:
+            print(url, "did not work")
+def save_and_download_image(urls, filenames, basepath):
+    leng = len(urls)
+    for index, url in enumerate(urls):
+        if filenames[index][0] == "/":
+            path = basepath + "/" + filenames[index][1::]
+        else:
+            path = basepath + "/" + filenames[index]
+        print(index,  "/", leng, "  ", url, "downloaded")
+        download_image(url,path )
+
+def fix_flyby_with_multiple_targets(flyby):
+    # a = [(index,row[1][1].count("|")) for index,row in enumerate(flyby) if row[1][1] != "Titan" and row[0][0] == "Name"]
+    tester = [fly for fly in flyby if "Titan" in fly[1][1] or "TI" in fly[0][1].upper()]
+    ret = [tester[index] + tester[index+1] for index in range(0,len(tester),2)]
+    return ret
+#save a pickle file in location file data if the file doesn't exist
+def get_or_save_pickle(file,data = None): 
+    if os.path.exists(file):
+        with open(file, "rb") as f:
+            data = pickle.load(f)
+    else:
+        if data == None:
+            raise ValueError("data must be provided if file does not exist")
+        with open(file, "wb") as f:
+            # Use pickle to dump the variable into the file
+            pickle.dump(data, f)    
+    return data
 
 def analyze_cube_info_and_vis(cube,vis):
     visbility = []
-    cube_indexes = [x[0][1] for x in cube[1]]
+    cube_indexes = [x[0][1] for x in cube]
     
     for index,cuber in enumerate(vis):
-        file_loc = os.path.splitext(cuber[0].split('/')[-1])[0]
-        cuber = cuber[1::]
+        file_loc = os.path.splitext(cuber[0].replace("\\","/").split('/')[-1])[0]
+        cuber = cuber[2::]            
+
         try:
-            data = cube[1][cube_indexes.index(file_loc)]
+            data = cube[cube_indexes.index(file_loc)]
             data = [format_string(dat[1]) for dat in data]
-            data.extend(cuber[1::])
+            data.extend(cuber)
         except:
-            data = ["_"]*len(cube[1][0])
-            data.extend(cuber[1::])
+            data = ["_"]*len(cube[0])
+            data.extend(cuber)
         visbility.append(data)
-    headers= [x[0] for x in cube[1][0]]; headers.extend(["x", "y", "radius", "percentage"])
+        print(index)
+    headers= [x[0] for x in cube[0]]
+    headers.extend(["x", "y", "radius", "percentage"])
     return visbility, headers
+
 def write_results(results, filepath):
     with open(filepath, 'w', newline="") as f:
         # create the csv writer
@@ -254,151 +319,82 @@ def write_results(results, filepath):
             writer.writerow(row)
     print("rows written")
 
-# import requests
-# from bs4 import BeautifulSoup
-# import pandas as pd
-# import os
-# import numpy as np
-# import time
-# import urllib.request
-# from pprint import pprint
-# from html_table_parser.parser import HTMLTableParser
-# from urllib.parse import urljoin
-# import urllib.parse
-# import csv
-# nantes_csv = pd.read_csv('C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/nantes.csv')
-# nantes_csv = np.array(nantes_csv)
-# folder = 'C:/Users/aadvi/Desktop/North_South_Asymmetry/data/flyby_info/'
 
-# targeted_flybys = [row for row in list(nantes_csv) if "|" in row[1]]
-# non_targeted_flybys = [row for row in list(nantes_csv) if "|" not in row[1]]
-# nantes_csv = nantes_csv
 
-# def url_get_contents(url):
-#     req = urllib.request.Request(url=url)
-#     f = urllib.request.urlopen(req)
-#     # reading contents of the website
-#     return f.read()
-# def parse_url(url):
-#     contents = url_get_contents(url).decode('utf-8')
-#     start = 0
-#     parsed_url = urllib.parse.urlparse(url)
-#     parsed_url = url[0:url.index(parsed_url.netloc)] + parsed_url.netloc
-#     # domain = '{uri.netloc}/'.format(uri=parsed_uri)
-#     ret_url = []
-#     flyby = url.split('/')[-1]
-#     while True:
-#         finded = contents.find("/cube/",start)
-#         if finded > -1:
-#             founded =  contents.find("/cube/", finded+20)
-#             content_str = contents[finded:founded]
-#             content = content_str.split("\n")
-#             if "missing-vis" not in content_str:
-#                 content = [cont for cont in content if "src" in cont][0]
-#                 content = content.replace("src=",""); content = content.replace('"','')
-#                 content = content.strip()
-#                 ret_url.append(content)
-#             start = founded
-#         else:
-#             break
-#     ret_url = ret_url[0:-2]
-#     return_filename = [flyby + "/" + ret.split('/')[-1] for ret in ret_url]
-#     url = [(parsed_url + '/' + '/'.join(ret[1::].split('xxx'))) for ret in ret_url]
-#     return return_filename, url
-# def download_image(url, filename=None):
-#     if filename is None:
-#         filename = url
-#     if not os.path.exists('/'.join(filename.split('/')[0:-1])):
-#         os.mkdir('/'.join(filename.split('/')[0:-1]))
-#     if not os.path.exists(filename):
-#         try:
-#             urllib.request.urlretrieve(url, filename)
-#         except:
-#             print(url, "did not work")
-# def save_and_download(urls, filenames, basepath):
-#     leng = len(urls)
-#     for index, url in enumerate(urls):
-#         if filenames[index][0] == "/":
-#             path = basepath + "/" + filenames[index][1::]
-#         else:
-#             path = basepath + "/" + filenames[index]
-#         print(index,  "/", leng, "  ", url, "downloaded")
-#         download_image(url,path )
-# # download the file and save it to a local file
-# filename = []
-# url = []
-# for targeted_flyby in non_targeted_flybys:
-#     ab,bc = parse_url(targeted_flyby[0])
-#     filename.extend(ab)
-#     url.extend(bc) 
-#     print("completed", targeted_flyby)
-# save_and_download(url,filename, "C:/Users/aadvi/Desktop/Base")
-# filename = []
-# url = []
-# for targeted_flyby in targeted_flybys:
-#     ab,bc = parse_url(targeted_flyby[0])
-#     filename.extend(ab)
-#     url.extend(bc) 
-#     print("completed", targeted_flyby)
-# save_and_download(url,filename, "C:/Users/aadvi/Desktop/Base")
 
-if __name__ == "__main__":  
-    baseurl = 'https://vims.univ-nantes.fr'
+if __name__ == "__main__":
+    """Get all flyby urls, then get all cubes, then analyze and log the cubes""" 
     searchurl = 'https://vims.univ-nantes.fr/target/titan'
-    csv_save_path = 'nantes.csv'
+    folder = 'D:/Nantes'
+    
+    #### START
     urls = parse_nantes_for_all_flybys(searchurl)
     #get all the nantes data for each flyby
-    if os.path.exists("code/VIMS Data Ingestion/data/flybys.pickle"):
-        with open("code/VIMS Data Ingestion/data/flybys.pickle", "rb") as f:
-            flyby= pickle.load(f)
-
-    else:
-        with open("code/VIMS Data Ingestion/data/flybys.pickle", "wb") as f:
-            # Use pickle to dump the variable into the file
-            flyby = parse_for_the_info_tables(urls)
-            pickle.dump(flyby, f)
+    try:        
+        flyby = get_or_save_pickle("code/VIMS Data Ingestion/data/flybys.pickle")
+    except ValueError:
+        flyby = parse_for_the_info_tables(urls)
+        get_or_save_pickle("code/VIMS Data Ingestion/data/flybys.pickle", flyby)
     flybyarray = flyby[1]
     flybystuff = flyby[0]
     flybydict = combine_table_with_url(flybyarray, urls)
+    
     if os.path.exists("code/VIMS Data Ingestion/data/nantes.csv"):
-        nantes_csv = np.array(pd.read_csv('code/VIMS Data Ingestion/data/nantes.csv'), dtype = 'O')
+        nantes_csv = np.array(pd.read_csv('code/VIMS Data Ingestion/data/nantes.csv'))
     else:
         write_flyby_data(flybydict, "code/VIMS Data Ingestion/data/nantes.csv")
     
     ##
     ## NANTES DATA FOR FLYBYS PUT IN CSV
     ##
+
+    # targeted_flybys = [row for row in list(nantes_csv) if "|" in row[1]]
+    # non_targeted_flybys = [row for row in list(nantes_csv) if "|" not in row[1]]
     
-    parent_folder = "data/Nantes"
-    # # call the function on the parent folder to get the list of results
-    if os.path.exists("code/VIMS Data Ingestion/data/cubes.pickle"):
-        with open("code/VIMS Data Ingestion/data/cubes.pickle", "rb") as f:
-            vis= pickle.load(f)
+    
 
-    else:
-        vis = analyze_folder_for_visibility(parent_folder)
-        with open("code/VIMS Data Ingestion/data/cubes.pickle", "wb") as f:
-            # Use pickle to dump the variable into the file
-            pickle.dump(vis, f)
-
+    # download the file and save it to a local file
+    try:
+        url,filename = get_or_save_pickle("code/VIMS Data Ingestion/data/filenames.pickle")
+    except:
+        filename = []; url = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for targeted_flyby in nantes_csv:
+                ab, bc = parse_url(targeted_flyby[0])
+                filename.extend(ab)
+                url.extend(bc)
+                print("completed", targeted_flyby, len(ab))  
+        get_or_save_pickle("code/VIMS Data Ingestion/data/filenames.pickle", (url,filename))
+        save_and_download_image(url,filename, "D:/Nantes")
+    
     ##
-    ##GET CUBE INFO
+    ## GET VISIBILITY
+    ##
+    
+    try:        
+        vis = get_or_save_pickle("code/VIMS Data Ingestion/data/cubes.pickle")
+    except ValueError:
+        vis = analyze_folder_for_visibility(folder)
+        get_or_save_pickle("code/VIMS Data Ingestion/data/cubes.pickle", vis)
+    
+    ##
+    ## GET CUBE INFO
     ##
     
     new_url = "https://vims.univ-nantes.fr/cube/"
-
-    if os.path.exists("code/VIMS Data Ingestion/data/cube_info.pickle"):
-        with open("code/VIMS Data Ingestion/data/cube_info.pickle", "rb") as f:
-            results= pickle.load(f)
-
-    else:
-        results = analyze_folder_for_cube_info(parent_folder, new_url)
-        with open("code/VIMS Data Ingestion/data/cube_info.pickle", "wb") as f:
-            # Use pickle to dump the variable into the file
-            pickle.dump(results, f)
-    arr = analyze_cube_info_and_vis(results,vis)
-    array = arr[0]
-    array.insert(0,arr[1])
-    # show_positive_results(vis) #show limb photos
+    try:
+        results = get_or_save_pickle("code/VIMS Data Ingestion/data/cube_info.pickle")
+    except:
+        results= fix_flyby_with_multiple_targets(analyze_folder_for_cube_info(folder, new_url)[1])
+        get_or_save_pickle("code/VIMS Data Ingestion/data/cube_info.pickle", results)
     
+    # show_positive_results(vis) #show limb photos
+    try:
+        array = get_or_save_pickle("code/VIMS Data Ingestion/data/nantes_cubes.pickle")
+    except:
+        arr = analyze_cube_info_and_vis(results,vis)
+        array = arr[0]
+        array.insert(0,arr[1])
+        get_or_save_pickle("code/VIMS Data Ingestion/data/nantes_cubes.pickle", array)
     write_results(array, "code/VIMS Data Ingestion/data/nantes_cubes.csv")
