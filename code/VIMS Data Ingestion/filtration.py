@@ -1,8 +1,21 @@
-import datetime
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import pickle
 from thefuzz import fuzz
+def convert_dates(date):
+    date_list = date.replace(":","-").split("-"); date_list = [d for d in date_list if len(d) > 0]
+    date = '-'.join(date_list[0:3])
+    if len(date_list) == 3:
+        date += "-00:00:00"
+    else:
+        addition = ':' + ':'.join((6 - len(date_list))*["00"])
+        date += "-" + ":".join(date_list[3::]) + addition
+    return date
+def fix_date(date):
+    date = date.replace(" at ", "-").replace("/","-").replace(":", "-").split("-")
+    date = '-'.join(date)
+    return date
 def get_limb(csv):
     header = csv[0]
     header_index = [index for index,h in enumerate(header) if "limb vis" in h.lower()][0]
@@ -19,7 +32,7 @@ def get_vis(csv):
 def get_ir(csv):
     header = csv[0]
     header_index = [index for index,h in enumerate(header) if "sampling mode" in h.lower()][0]
-    header_split_index = [index for index,hiin enumerate(header[header_index].split("|")) if "ir" in h.lower()][0]
+    header_split_index = [index for index,h in enumerate(header[header_index].split("|")) if "ir" in h.lower()][0]
     return [header] + [c for c in csv[1::] if "n/a" not in c[header_index].lower().split("|")[header_split_index]]
 def get_vis_and_ir(csv):
     header = csv[0]
@@ -69,10 +82,23 @@ def get_mission(csv,mission_ints):
         else:
             mission_ints = mission[0]
         return [header] + [c for c in csv[1::] if missions[mission_ints] in c[header_index]]
-def filter_dates(csv,start_date,end_date):
+def filter_distance(csv,distance):
     header = csv[0]
-    header_index = [index for index,h in enumerate(header) if "date" in h.lower()][0]
-    return [header] + [c for c in csv[1::] if "n/a" not in c[header_index] and datetime.strptime(c[header_index],"%Y-%m-%d") >= datetime.strptime(start_date,"%Y-%m-%d") and datetime.strptime(c[header_index],"%Y-%m-%d") <= datetime.strptime(end_date,"%Y-%m-%d")]
+    header_index = [index for index,h in enumerate(header) if "dist" in h.lower()][0]
+    return [header] + [c for c in csv[1::] if "n/a" not in c[header_index] and max(distance) >= float(c[header_index].replace(",","").split(" ")[0]) >= min(distance)]
+
+def filter_resolution(csv,resolution):
+    header = csv[0]
+    header_index = [index for index,h in enumerate(header) if "resolution" in h.lower()][0]
+    return [header] + [c for c in csv[1::] if "n/a" not in c[header_index] and max(resolution) >= float(c[header_index].split(" ")[0]) >= min(resolution)]
+def filter_dates(csv,start_date,end_date):
+    start_date = convert_dates(start_date)
+    end_date = convert_dates(end_date)
+    start = datetime.strptime(start_date,"%Y-%m-%d-%H:%M:%S")
+    end = datetime.strptime(end_date,"%Y-%m-%d-%H:%M:%S")
+    header = csv[0]
+    header_index = [index for index,h in enumerate(header) if "time" in h.lower()][0]
+    return [header] + [c for c in csv[1::] if "n/a" not in c[header_index] and start <= datetime.strptime(fix_date(c[header_index]),"%d-%m-%Y-%H-%M-%S") <= end]
 if __name__ == "__main__":
     with open("code/VIMS Data Ingestion/data/combined_nantes.pickle", "rb") as f:
         # Use pickle to dump the variable into the file
@@ -85,6 +111,9 @@ if __name__ == "__main__":
     refined_search = get_percentage(refined_search, 0.5)
     refined_search = get_filtered_phase(refined_search,[0,40])
     refined_search = get_refined_samples(refined_search,[10,150],[10,150])
-    refined_search = get_mission(refined_search, ["equinox","solsticesd"])
-    refined_search = filter_dates(refined_search, "2010-01-01", "2020-01-01")
+    # refined_search = get_mission(refined_search, ["equinox","solsticesd"])
+    # refined_search = filter_dates(refined_search, "2013-01-01-00:00", "2020-01-01")
+    refined_search = filter_resolution(refined_search, [50, 1000])
+    refined_search = filter_distance(refined_search, [50, 1000000])
+
     print(refined_search)
