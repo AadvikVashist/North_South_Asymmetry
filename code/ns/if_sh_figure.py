@@ -568,8 +568,8 @@ class if_sh_Figure:
                     if self.Tdataset[dataset][0] in scales:
                         cData = scales.index(self.Tdataset[dataset][0])
                         if dataset == 7:
-                            x = x[14::]
-                            y = y[14::]
+                            x = x[25::]
+                            y = y[25::]
                             scalar = self.ifScale[cData][1][band]
                             x /=scalar
                         elif dataset == 2:

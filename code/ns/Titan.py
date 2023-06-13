@@ -10,7 +10,7 @@ import numpy as np
 import time
 import subprocess, os, platform
 class Titan:
-    def __init__(self, directory = {"flyby_parent_directory" : 'C:/Users/aadvi/Desktop/North_South_Asymmetry/data', "wavelength_data": "titan_data/wavelength.csv", "flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "if_scalars" : 'titan_data/IFData.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : {"if" : 'Figures/IF', "flux" : 'Figures/NS_Flux_Ratio', "tilt" : 'Figures/Tilt', "flowchart" : 'Figures/Flowchart', "nsb" : 'Figures/North_South_Boundary', "figures"  : "Figures/"}, "lorenz_figure" : "titan_data/lorenz_2004/x.csv"},
+    def __init__(self, directory = {"flyby_parent_directory" : '/Users/aadvik/Desktop/NASA/North_South_Asymmetry/data', "wavelength_data": "titan_data/wavelength.csv", "flyby_data" : 'csv/', "flyby_image_directory" : 'vis.cyl', "flyby_info" : 'titan_data/flyby_data.csv', "if_scalars" : 'titan_data/IFData.csv', "analysis": '_analytics.csv', "analysis_folder" : 'Result/', "Figure names" : {"if" : 'Figures/IF', "flux" : 'Figures/NS_Flux_Ratio', "tilt" : 'Figures/Tilt', "flowchart" : 'Figures/Flowchart', "nsb" : 'Figures/North_South_Boundary', "figures"  : "Figures/"}, "lorenz_figure" : "titan_data/lorenz_2004/x.csv"},
                     shiftDegree = 6,
                     flybys =  [['Ta', -12, 15, [110,290]],['T8', -12, 15, [120,300]],['T31', -12, 15, [60,240]],
                                 ['T61', -12, 15,[-120,-300]],['T62', -12, 15,  [79,247]],['T67', -12, 15, [-120,-300]],
@@ -247,4 +247,4 @@ class Titan:
                 sum+=x
         print("files:", str(fileCount), "\nfunctions in all files:", str(methodSum), "\nlines in all files:", str(sum), '\ncharacters in all files:', str(characterCount)) 
 if __name__ == "__main__":
-    x = Titan(purpose = ["figure", "flux"], info = 100, whichDatasets = "All")
+    x = Titan(purpose = ["figure", "if"], info = 100, whichDatasets = "All")
