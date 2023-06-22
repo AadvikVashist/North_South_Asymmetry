@@ -6,5 +6,5 @@
 *.blg
 *.bbl
 *.aux
-code/VIMS Data Ingestion/data/cubes.pickle
-code/VIMS Data Ingestion/data/all_cubes.pickle
+*.pickle
+*.cub

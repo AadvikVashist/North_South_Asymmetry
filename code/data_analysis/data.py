@@ -117,8 +117,8 @@ class data:
             os.makedirs(folderPath)
         self.resultsFolder = folderPath
     def createFile(self):
-        open(os.path.join(self.resultsFolder,self.flyby + "_analytics.csv","w"))
-        x = open(os.path.join(self.resultsFolder,self.flyby + "_analytics.csv"),"a+", newline='')
+        open(self.resultsFolder + self.flyby + "_analytics.csv","w")
+        x = open(self.resultsFolder + self.flyby + "_analytics.csv","a+", newline='')
         self.analysisFile = x
     def fileWrite(self, x):
         a = csv.writer(self.analysisFile)
@@ -345,7 +345,7 @@ class data:
             #hc_band[crop[0]:crop[1],crop[2]:crop[3]]
             columnHC = hc_band[:,col]
             if_sh = columnHC[self.subset] ## subset HC band b/t 30°S to 0°N 
-            #lat_sh = self.columnLat[self.subset]  # subset HC band b/t 30°S to 0°N 
+            #lat_sh = self.columnLat[self.subset]  ## subset HC band b/t 30°S to 0°N 
             self.lon_sh = self.lon[:,col][self.subset]  ## subset HC band b/t 30°S to 0°N 
             if np.min(if_sh) != np.max(if_sh):
                 try:
