@@ -27,24 +27,43 @@ import cv2
 surface_windows = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True]
 ir_surface_windows = [99,100,106,107,108,109,119,120,121,122,135,136,137,138,139,140,141,142,163,164,165,166,167,206,207,210,211,212,213,338,339,340,341,342,343,344,345,346,347,348,349,350,351,352]
 class analyze_image:
-    def __init__(self):
+    def __init__(self, figures : bool = None):
         self = self
-        self.figures = {
-            "original_image" : False,
-            "shifted_unrefined_image" : True,
-            "gaussian_brightness_bands" : True,
-            "unrefined_north_south_boundary" : True,
-            "cropped_shifted_image" : False,
-            "nsb_column" : True,
-            "visualized_plotting" : False,
-            "boundary_vs_longitude" : False,
-            "persist_figures" : 1
-        }
+        if figures == False:
+            self.figures = {
+                "original_image" : False,
+                "shifted_unrefined_image" : False,
+                "gaussian_brightness_bands" : False,
+                "unrefined_north_south_boundary" : False,
+                "cropped_shifted_image" : False,
+                "nsb_column" : False,
+                "cube_spline_selection_of_boundary": False,
+                "visualized_plotting" : False,
+                "boundary_vs_longitude" : False,
+                "persist_figures" : False
+            }
+        else:
+            self.figures = {
+                "original_image" : False,
+                "shifted_unrefined_image" : True,
+                "gaussian_brightness_bands" : False,
+                "unrefined_north_south_boundary" : True,
+                "cropped_shifted_image" : False,
+                "nsb_column" : True,
+                "cube_spline_selection_of_boundary": False,
+                "visualized_plotting" : False,
+                "boundary_vs_longitude" : False,
+                "persist_figures" : 4
+            }
         self.figure_keys = {key: index for index, (key, value) in enumerate(self.figures.items())}
     def figure_options(self):
         print("\nCurrent Figure Setttings:\n",*[str(val[0]) + " = " + str(val[1]) for val in self.figures.items()], "\n\n", sep = "\n")
         return self.figures
-    def show(self, force = False):
+    def show(self, force = False, duration : float = None):
+        if duration is not None:
+            plt.pause(duration)
+            plt.clf()
+            return
         if force:
             plt.pause(10)
             return
@@ -222,14 +241,21 @@ class analyze_image:
             return np.nan
         values_at_zeros = [cs(zero) for zero in zeros]
 
-        max_min = np.polyfit(x, y, deg= 1)[0]
-        if max_min > 0:
-            north_south_boundary_index = np.argmax(values_at_zeros)
-        else:
+        max_min = np.polyfit(x, y, deg= 2)
+        if max_min[0] > 0:
             north_south_boundary_index = np.argmin(values_at_zeros)
+        else:
+            north_south_boundary_index = np.argmax(values_at_zeros)
+        if self.figures["cube_spline_selection_of_boundary"]:
+            plt.figure(self.figure_keys["cube_spline_selection_of_boundary"])
+            plt.plot(x,y)
+            plt.plot(x, [max_min[0]*xa**2+max_min[1]*xa+max_min[2] for xa in x])
+            plt.vlines(zeros, (np.mean(y) + np.min(y))/2,  (np.mean(y) + np.max(y))/2, color = (0,0,0,1))
+            plt.vlines(zeros[north_south_boundary_index], np.min(y), np.max(y), color = (1,0,0,1))
+            self.show(duration = 0.05)
         return zeros[north_south_boundary_index]
     
-    def locate_north_south_boundary_unrefined(self, image):
+    def locate_north_south_boundary_unrefined(self, image, prejudice : int = None):
         self.shifted_image, cropped_rows, cropped_columns = self.shift_image(image, 20)
         top_shift = cropped_rows.index(True)
         if self.figures["gaussian_brightness_bands"]:
@@ -260,10 +286,24 @@ class analyze_image:
         elif len(zeros) == 0:
             raise ValueError("didn't work")
         # remove extraneous soulutions (imaginary)
-
-        north_south_mins = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == True and self.compare_acceleration_to_flux(approx, True, average_brightness,0)]
-        north_south_maxes = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == False and self.compare_acceleration_to_flux(approx, False, average_brightness,0)]
-
+        max_min = np.polyfit(latitudes, gaussian_y, deg= 2)
+        if max_min[0] > 0:
+            boundarys_with_right_sign = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == True]
+        else:
+            boundarys_with_right_sign = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == False]
+            # north_south_boundary_index = np.argmax(values_at_zeros)
+        # north_south_mins = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == True and self.compare_acceleration_to_flux(approx, True, average_brightness,0)]
+        # north_south_maxes = [approx for approx in zeros if self.min_or_max(derivative, approx, 5, 0) == False and self.compare_acceleration_to_flux(approx, False, average_brightness,0)]
+        if len(boundarys_with_right_sign) == 0:
+            ret_val =  image.shape[0]/2-top_shift
+        elif len(boundarys_with_right_sign) == 1:
+            ret_val =  float(boundarys_with_right_sign[0])
+        else:
+            if prejudice:
+                boundarys_with_right_sign = sorted(boundarys_with_right_sign, key= lambda x: x-prejudice)
+            else:
+                boundarys_with_right_sign = sorted(boundarys_with_right_sign, key= lambda x: x-image.shape[1]/2)
+            ret_val =  float(boundarys_with_right_sign[0])
         if self.figures["unrefined_north_south_boundary"] == True:
             plt.figure(self.figure_keys["unrefined_north_south_boundary"])
             plt.plot(latitudes,average_brightness,label="shifted data") #values
@@ -274,10 +314,11 @@ class analyze_image:
             plt.plot(latitudes,[derivative(xa)*20 for xa in latitudes], color = (0,0,1,1), linestyle = "dotted",label="derivative")
             plt.hlines([0], [0],[image.shape[0]], colors = (0,0,0), linestyles='dashed',label="0 lat")
             plt.grid(True, 'both')
-            if len(north_south_mins) != 0:
-                plt.vlines(north_south_mins, np.min(average_brightness)/2+np.mean(average_brightness), np.max(average_brightness)/2+np.mean(average_brightness), colors = (0,0,0), linestyles='dashed',label="min")
-            if len(north_south_maxes) != 0:
-                plt.vlines(north_south_maxes, np.min(average_brightness)/2+np.mean(average_brightness), np.max(average_brightness)/2+np.mean(average_brightness), colors = (1,0,0), linestyles='dashed',label="max")
+            if max_min[0] > 0:
+                plt.vlines(boundarys_with_right_sign, np.min(average_brightness)/2+np.mean(average_brightness), np.max(average_brightness)/2+np.mean(average_brightness), colors = (0,0,0), linestyles='dashed',label="min")
+            else:
+                plt.vlines(boundarys_with_right_sign, np.min(average_brightness)/2+np.mean(average_brightness), np.max(average_brightness)/2+np.mean(average_brightness), colors = (1,0,0), linestyles='dashed',label="max")
+            plt.vlines(ret_val, np.min(average_brightness)/2+np.mean(average_brightness), np.max(average_brightness)/2+np.mean(average_brightness), colors = (0,1,0), linestyles='solid',label="lat_selected" )
             plt.legend()
             plt.title("Mean Brightness Data Asymmetry Location")
             plt.xlabel("Latitude")
@@ -285,15 +326,7 @@ class analyze_image:
             # plt.plot([self.polyXPlugin(ax, *fitted_line_derivative) for ax in x])
             self.show()
         
-        if len(north_south_mins) + len(north_south_maxes) == 0:
-            return image.shape[0]/2
-        elif len(north_south_mins) + len(north_south_maxes) == 1:
-            north_south_maxes.extend(north_south_mins)
-            return float(north_south_maxes[0]) + top_shift
-        else:
-            north_south_maxes.extend(north_south_mins)
-            north_south_maxes = sorted(north_south_maxes, key= lambda x: x-image.shape[1]/2)
-            return float(north_south_maxes[0]) + top_shift
+        return ret_val + top_shift
     def locate_north_south_boundary_refined(self, image, min_lat_pixel, max_lat_pixel, shift_amount):
         nsa_lats_with_outliers = []
         nsa_lat_pixels_with_outliers = []
@@ -413,7 +446,16 @@ class analyze_image:
     #     # Plot the rotated image
     #     plt.imshow(translated_image, cmap='gray')
     #     plt.show()
-    def complete_image_analysis_from_cube(self, cube, band: int, save_location: str = None):
+    def cube_to_unrefined_prediction(self, cube, band: int, prejudice : int = None):
+        self.cube_name = cube.img_id
+        self.projected_image, (self.projected_lon, self.projected_lat), _, _= self.equirectangular_projection(cube, band)
+        if self.figures["shifted_unrefined_image"] == True:
+            plt.imshow(self.projected_image, cmap = "gray")
+            plt.title("Equirectangular Projection from "+ cube.flyby.name  +" at " + str(cube.w[band]) + " µm")
+            self.show()
+        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, prejudice = prejudice)        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
+        return self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
+    def complete_image_analysis_from_cube(self, cube, band: int, save_location: str = None, biased_lat : float = None):
         self.save_location = save_location
 
         self.cube_name = cube.img_id
@@ -435,8 +477,8 @@ class analyze_image:
         # after cylindrical projection, remove extraneous longitude data
         
         # use opencv to find north south boundary - shift images, apply gaussian blur, then find line (towards center)
-        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image)        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
-        self.nsa_bounding_box = self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])/2
+        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, biased_lat)        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
+        self.nsa_bounding_box = self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
         self.nsa_bounding_box = [self.nsa_bounding_box-30, self.nsa_bounding_box+30]
         lat_res = np.mean(np.diff(self.projected_lat[:,0]))
         nsa_bounding_box_pixels = [np.max((0,int(np.round(nsa_bounding_box_pixel - 30/lat_res)))), int(np.round(nsa_bounding_box_pixel + 30/lat_res))]
@@ -482,13 +524,54 @@ class complete_cube:
         #     data = analysis.complete_image_analysis_from_cube(self.cube_vis, int(band), self.save_location)
         
         #Infrared analysis
+        lats = []
+        for band in range(np.min(self.cube_ir.bands),np.max(self.cube_ir.bands)+1, 5):
+            if int(band) in ir_surface_windows:
+                continue
+            analysis = analyze_image(False)
+            
+            try:
+                if len(lats) > 10:
+                    lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band), np.mean(lats))
+                else:
+                    lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band))
+
+            except ValueError:
+                continue
+            lats.append(lat)
+            print(lat)
+        prejudiced = np.mean(lats)
         for band in self.cube_ir.bands:
             if int(band) in ir_surface_windows:
                 continue
             analysis = analyze_image()
-            data = analysis.complete_image_analysis_from_cube(self.cube_ir, int(band), self.save_location)
-                    
+            data = analysis.complete_image_analysis_from_cube(self.cube_ir, int(band), self.save_location, biased_lat = prejudiced)
 
+
+class analyze_complete_dataset:
+    def __init__(self, cubes_location, manifest_sublocation) -> None:
+        self.cubes_location = cubes_location
+        self.manifest_location = os.path.join(cubes_location, manifest_sublocation)
+
+        self.all_cubes = [cubes_location + file for file in os.listdir(cubes_location) if file.endswith(".cub") or file.endsiwth(".jcube")]
+        with open(self.manifest_location, "r") as infile:
+            self.manifest_contents = json.loads(infile)
+        self.figures = {
+            "i/f" : True,
+            "timeline" : True,
+            "lat_vs_wavelength" : True,
+            "flux_vs_wavelength" : True,
+            "false_color" : True,
+            "tilt" : True,
+        }
+        self.figure_keys = {key: index for index, (key, value) in enumerate(self.figures.items())}
+    def figure_options(self):
+        print("\nCurrent Figure Setttings:\n",*[str(val[0]) + " = " + str(val[1]) for val in self.figures.items()], "\n\n", sep = "\n")
+        return self.figures
+    def complete_dataset_analysis(self, save_location = None):
+        return "not implemented yet"
+        
+    
 class data:
     def __init__(self, directory, datasetName, shiftDegree, purpose):
         # create all class paths,directories, and variables
