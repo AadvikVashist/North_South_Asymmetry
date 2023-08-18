@@ -110,10 +110,23 @@ if __name__ == "__main__":
     refined_search = get_vis_and_ir(refined_search)
     refined_search = get_percentage(refined_search, 0.5)
     refined_search = get_filtered_phase(refined_search,[0,40])
-    refined_search = get_refined_samples(refined_search,[10,150],[10,150])
-    # refined_search = get_mission(refined_search, ["equinox","solsticesd"])
-    # refined_search = filter_dates(refined_search, "2013-01-01-00:00", "2020-01-01")
-    refined_search = filter_resolution(refined_search, [50, 1000])
-    refined_search = filter_distance(refined_search, [50, 1000000])
+    # refined_search = get_refined_samples(refined_search,[10,150],[10,150])
+    # # refined_search = get_mission(refined_search, ["equinox","solsticesd"])
+    # # refined_search = filter_dates(refined_search, "2013-01-01-00:00", "2020-01-01")
+    # refined_search = filter_resolution(refined_search, [50, 500])
+    # refined_search = filter_distance(refined_search, [50, 1000000])
 
     print(refined_search)
+    
+    #limb brightening
+    # latitudonal strcutre
+    #IR wavelengths and spherical mapping
+    #Deposits of lightening
+    
+    #lightening should look like the same as earth, a plasma nitrogen, should be all wavelengths
+"""
+1. Get all the cubes without despiker
+2. Analysis. 
+3.
+
+"""

@@ -1,0 +1,15 @@
+// 147757906_1 - Jason got 48%
+// North is right
+// do the exact angle. 
+// day limb and night limb is very diff
+// limb darkening laws 
+
+
+//1. figure out what the angle for North is in the iamge
+//2. Shift the slants for whatever the angle is
+//3. Save plots again
+//4. For each cube figure the pixel value for titan end is (if emission is not between 0 and 90, get rid of it) percetnage distance from end
+//5. Don't cut out any fits out
+//6. Plot brightnes vs emission angle for each fit (each angle) 
+//7. Get the paramters from the limb darkening laws (in the end he would want u1 and u2) - report u1 + u2 and u1 - u2
+

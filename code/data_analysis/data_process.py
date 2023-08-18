@@ -14,7 +14,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import CubicSpline, PchipInterpolator
 from scipy.optimize import brentq
 from scipy.stats import linregress
-
+import pickle
 import json
 import pyvims
 # flyby directory location
@@ -26,8 +26,68 @@ import cv2
 # surface_windows = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True]
 surface_windows = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, True, True, True, True, False, False, False, False, False, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, True]
 ir_surface_windows = [99,100,106,107,108,109,119,120,121,122,135,136,137,138,139,140,141,142,163,164,165,166,167,206,207,210,211,212,213,338,339,340,341,342,343,344,345,346,347,348,349,350,351,352]
+def join_strings(*args):
+    return os.path.join(*args).replace("\\", "/")
+def check_if_exists_or_write(file : str, base : str = None, prefix : str = None, file_type = None, save = False, data = None, force_write = False, verbose = True):
+    full_path = os.path.join(base, prefix, file)
+    if file_type is not None:
+        file_type = file_type.lower().strip().replace(".", "")
+        full_path += "." + file_type
+    if save == True:
+        if data is None:
+            raise ValueError("Data must be provided to save")
+        if verbose:
+            print("Saving to: ", full_path)
+        directory = os.path.dirname(full_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        if force_write == False and os.path.exists(full_path):
+            if verbose:
+                print("File already exists")
+            return False
+        if full_path.endswith(".pkl") or full_path.endswith(".pickle"):
+            with open(full_path, "wb") as file_object:
+                pickle.dump(data, file_object)
+            if verbose:
+                print("Saved", full_path)
+        elif full_path.endswith(".json"):
+            with open(full_path, "w") as file_object:
+                data = json.dump(file_object)
+            if verbose:
+                print("Saved", full_path)
+        elif full_path.endswith(".csv"):
+            with open(full_path, 'w', newline='') as file_object:
+                writer = csv.writer(file_object)
+                # Write the data to the CSV file
+                writer.writerows(data)
+            if verbose:
+                print("Saved", full_path)
+        elif full_path.endswith(".png") or full_path.endswith(".jpg") or full_path.endswith(".jpeg") or full_path.endswith(".tiff") or full_path.endswith(".tif"):
+            cv2.imwrite(full_path, data)
+            if verbose:
+                print("Saved", full_path)
+        else:
+            if verbose:
+                print("File type not recognized")
+    else:
+        if os.path.exists(full_path):
+            if full_path.endswith(".pkl") or full_path.endswith(".pickle"):
+                with open(full_path, 'rb') as pickle_file:
+                    data = pickle.load(pickle_file)
+            elif full_path.endswith(".json"):
+                with open(full_path, "r") as file_object:
+                    data = json.load(file_object)
+            elif full_path.endswith(".csv"):
+                data = pd.read_csv(full_path)
+            elif full_path.endswith(".png") or full_path.endswith(".jpg") or full_path.endswith(".jpeg") or full_path.endswith(".tiff") or full_path.endswith(".tif"):
+                data = Image.open(full_path)
+            else:
+                data = None
+            return data
+        else:
+            return False
 class analyze_image:
-    def __init__(self, figures : bool = None):
+    def __init__(self, figures : bool = None, show_figures : bool = False):
         self = self
         if figures == False:
             self.figures = {
@@ -44,18 +104,21 @@ class analyze_image:
             }
         else:
             self.figures = {
-                "original_image" : False,
+                "original_image" : True,
                 "shifted_unrefined_image" : True,
-                "gaussian_brightness_bands" : False,
+                "gaussian_brightness_bands" : True,
                 "unrefined_north_south_boundary" : True,
-                "cropped_shifted_image" : False,
+                "cropped_shifted_image" : True,
                 "nsb_column" : True,
-                "cube_spline_selection_of_boundary": False,
+                "cube_spline_selection_of_boundary": True,
                 "visualized_plotting" : False,
-                "boundary_vs_longitude" : False,
+                "boundary_vs_longitude" : True,
                 "persist_figures" : 4
             }
+        if show_figures == False:
+            self.figures["persist_figures"] = False
         self.figure_keys = {key: index for index, (key, value) in enumerate(self.figures.items())}
+        self.saved_figures = {key: None for key in self.figures}
     def figure_options(self):
         print("\nCurrent Figure Setttings:\n",*[str(val[0]) + " = " + str(val[1]) for val in self.figures.items()], "\n\n", sep = "\n")
         return self.figures
@@ -79,12 +142,17 @@ class analyze_image:
             return
         elif options == True:
             plt.show()
+        elif options == False:
+            return
         else:
             plt.pause(2)
             plt.clf()
             plt.close()
     def get_vmin_vmax(self, image):
         return np.quantile(image, [0.1, 0.9])
+        return np.quantile(image, [0.1, 0.9])
+    
+        return np.quantile(image, [0.1, 0.9])    
     
     def gauss2(self, x, b, a, x0, sigma):
         return b + (a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)))
@@ -247,7 +315,7 @@ class analyze_image:
         else:
             north_south_boundary_index = np.argmax(values_at_zeros)
         if self.figures["cube_spline_selection_of_boundary"]:
-            plt.figure(self.figure_keys["cube_spline_selection_of_boundary"])
+            fig = plt.figure(self.figure_keys["cube_spline_selection_of_boundary"])
             plt.plot(x,y)
             plt.plot(x, [max_min[0]*xa**2+max_min[1]*xa+max_min[2] for xa in x])
             plt.vlines(zeros, (np.mean(y) + np.min(y))/2,  (np.mean(y) + np.max(y))/2, color = (0,0,0,1))
@@ -259,13 +327,14 @@ class analyze_image:
         self.shifted_image, cropped_rows, cropped_columns = self.shift_image(image, 20)
         top_shift = cropped_rows.index(True)
         if self.figures["gaussian_brightness_bands"]:
-            plt.figure(self.figure_keys["gaussian_brightness_bands"])
+            fig = plt.figure(self.figure_keys["gaussian_brightness_bands"])
             for i in range(0,self.shifted_image.shape[1], 10):
                 average_brightness =  gaussian_filter(self.shifted_image[:,i], sigma=3)
                 plt.plot(range(self.shifted_image.shape[0]), average_brightness)
             plt.title("Raw Brightness Data with Gaussian Filter")
             plt.xlabel("Latitude")
             plt.ylabel("Brightness")
+            self.saved_figures["gaussian_brightness_bands"] = fig
             self.show()
         
         latitudes = list(range(self.shifted_image.shape[0]))
@@ -284,7 +353,7 @@ class analyze_image:
         if len(zeros) == 1:
             return zeros
         elif len(zeros) == 0:
-            raise ValueError("didn't work")
+            return None
         # remove extraneous soulutions (imaginary)
         max_min = np.polyfit(latitudes, gaussian_y, deg= 2)
         if max_min[0] > 0:
@@ -305,7 +374,7 @@ class analyze_image:
                 boundarys_with_right_sign = sorted(boundarys_with_right_sign, key= lambda x: x-image.shape[1]/2)
             ret_val =  float(boundarys_with_right_sign[0])
         if self.figures["unrefined_north_south_boundary"] == True:
-            plt.figure(self.figure_keys["unrefined_north_south_boundary"])
+            fig = plt.figure(self.figure_keys["unrefined_north_south_boundary"])
             plt.plot(latitudes,average_brightness,label="shifted data") #values
             # plt.plot(x,gaussian_y) #filtered values
             plt.plot(latitudes,plottedy,label="spline values") #splien values
@@ -323,6 +392,7 @@ class analyze_image:
             plt.title("Mean Brightness Data Asymmetry Location")
             plt.xlabel("Latitude")
             plt.ylabel("Brightness")
+            self.saved_figures["unrefined_north_south_boundary"] = fig
             # plt.plot([self.polyXPlugin(ax, *fitted_line_derivative) for ax in x])
             self.show()
         
@@ -333,9 +403,10 @@ class analyze_image:
         image = image[min_lat_pixel:max_lat_pixel]
         shifted_image, cropped_rows, cropped_columns = self.shift_image(image, 10, True)
         if self.figures["cropped_shifted_image"] == True:
-            plt.figure(self.figure_keys["cropped_shifted_image"])
+            fig = plt.figure(self.figure_keys["cropped_shifted_image"])
             plt.imshow(shifted_image, cmap = "gray")
             plt.title("Cropped Projection for Refined Processing")
+            self.saved_figures["cropped_shifted_image"] = fig
             self.show()
         latitudes = list(range(shifted_image.shape[0]))
         longitudes = list(range(shifted_image.shape[1]))
@@ -347,7 +418,7 @@ class analyze_image:
         standard_deviations_sorted = np.array(sorted(zip(standard_deviations, range(len(standard_deviations)))))
         quantile = standard_deviations_sorted[int(0.9*len(standard_deviations_sorted))][0]
         if self.figures["nsb_column"] == True:
-            plt.figure(self.figure_keys["nsb_column"])
+            fig = plt.figure(self.figure_keys["nsb_column"])
             plt.title("Asymmetry Predictions per Longitude")
             plt.xlabel("Latitude")
             plt.ylabel("Brightness")
@@ -377,18 +448,20 @@ class analyze_image:
 
             if self.figures["visualized_plotting"] == True:
                 plt.pause(0.01)
+            
             actual_height = relative_height + min_lat_pixel
             north_south_boundary_lat = self.pixel_to_geo(actual_height, self.projected_lat[:,0])
             nsa_lats_with_outliers.append(north_south_boundary_lat)
             nsa_lat_pixels_with_outliers.append(actual_height)
         if self.figures["nsb_column"] == True:
+            self.saved_figures["nsb_column"] = fig
             self.show()
         
         nsa_lat_pixels_outlier_free = self.remove_outliers(nsa_lat_pixels_with_outliers)
         nsa_lat_outlier_free = self.remove_outliers(nsa_lats_with_outliers)
 
         if self.figures["boundary_vs_longitude"] == True:
-            plt.figure(self.figure_keys["boundary_vs_longitude"],figsize=(8,8))
+            fig = plt.figure(self.figure_keys["boundary_vs_longitude"],figsize=(8,8))
             plt.title("Asymmetry Predictions vs Longitude")
             x = np.isnan(nsa_lat_pixels_outlier_free[0])
             longitude_values = [longitudes[i] for i in range(len(longitudes)) if not np.isnan(nsa_lat_pixels_outlier_free[i])]
@@ -401,6 +474,7 @@ class analyze_image:
             plt.plot(gaussian_longitudes, gaussian_filter(gaussian_y,sigma = 2), color = (0,1,0), label = "gaussian_filter", linewidth = 2)
             plt.plot(longitude_values, plotted_lats, color = (1,0,0), label = "unfiltered (aside for outliers)", linestyle = "dotted", linewidth = 2)
             plt.legend()
+            self.saved_figures["boundary_vs_longitude"] = fig
             self.show()
         # linear fit and check rscore
         longitude_values = [longitudes[i] for i in range(len(longitudes)) if not np.isnan(nsa_lat_pixels_outlier_free[i])]
@@ -408,7 +482,7 @@ class analyze_image:
         slope, intercept, r_value, p_value, std_err = linregress(longitude_values, lat_pixels_no_nans)
         r_squared = r_value**2
         if r_squared > 0.7 or np.std(lat_pixels_no_nans)/np.mean(lat_pixels_no_nans) > 0.2:
-            print("dev",np.nanstd(nsa_lat_outlier_free), "var", r_squared)
+            print("deviation",np.nanstd(nsa_lat_outlier_free), "variance", r_squared)
             return False
         return np.nanmean(nsa_lat_outlier_free)
     def albedo_brightness_of_north_south_asymmetry(self, preprojection_image, latitude, lats):
@@ -450,12 +524,16 @@ class analyze_image:
         self.cube_name = cube.img_id
         self.projected_image, (self.projected_lon, self.projected_lat), _, _= self.equirectangular_projection(cube, band)
         if self.figures["shifted_unrefined_image"] == True:
+            fig = plt.figure(self.figure_keys["shifted_unrefined_image"])
             plt.imshow(self.projected_image, cmap = "gray")
             plt.title("Equirectangular Projection from "+ cube.flyby.name  +" at " + str(cube.w[band]) + " µm")
+            self.saved_figures["shifted_unrefined_image"] = fig
             self.show()
-        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, prejudice = prejudice)        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
+        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, prejudice = prejudice)       # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
+        if nsa_bounding_box_pixel is None:
+            return None
         return self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
-    def complete_image_analysis_from_cube(self, cube, band: int, save_location: str = None, biased_lat : float = None):
+    def complete_image_analysis_from_cube(self, cube, band: int, save_location: str = None, biased_lat : float = 0):
         self.save_location = save_location
 
         self.cube_name = cube.img_id
@@ -463,23 +541,31 @@ class analyze_image:
         # self.rotate_image_to_north(cube.lon,cube.lat, cube[band])
         
         if self.figures["original_image"]:
-            plt.figure(self.figure_keys["original_image"])
+            fig = plt.figure(self.figure_keys["original_image"])
             plt.imshow(cube[band], cmap = "gray")
             plt.title("Cube from "+ cube.flyby.name  +" at " + str(cube.w[band]) + " µm")
+            self.saved_figures["original_image"] = fig
             self.show()
         # take image and apply cylindrical projection
         self.projected_image, (self.projected_lon, self.projected_lat), _, _= self.equirectangular_projection(cube, band)
 
         if self.figures["shifted_unrefined_image"] == True:
+            fig = plt.figure(self.figure_keys["shifted_unrefined_image"])
             plt.imshow(self.projected_image, cmap = "gray")
             plt.title("Equirectangular Projection from "+ cube.flyby.name  +" at " + str(cube.w[band]) + " µm")
+            self.saved_figures["shifted_unrefined_image"] = fig
             self.show()
         # after cylindrical projection, remove extraneous longitude data
         
         # use opencv to find north south boundary - shift images, apply gaussian blur, then find line (towards center)
-        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, biased_lat)        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
-        self.nsa_bounding_box = self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
-        self.nsa_bounding_box = [self.nsa_bounding_box-30, self.nsa_bounding_box+30]
+        nsa_bounding_box_pixel = self.locate_north_south_boundary_unrefined(self.projected_image, biased_lat)
+        if nsa_bounding_box_pixel is None:
+            return None
+        # use data from opencv analysis as a bounding box (+- 15 degs) for the data. refer back to cropped imaged (not opencv one), and locate north south asymmetry - derived brightness fit
+        nsa_bounding_box_lat = self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
+        nsa_bounding_box_lat =  (nsa_bounding_box_lat + 3 * biased_lat) /4
+        print("unref boundary latitude:", nsa_bounding_box_lat)
+        self.nsa_bounding_box = [nsa_bounding_box_lat-20, nsa_bounding_box_lat+20]
         lat_res = np.mean(np.diff(self.projected_lat[:,0]))
         nsa_bounding_box_pixels = [np.max((0,int(np.round(nsa_bounding_box_pixel - 30/lat_res)))), int(np.round(nsa_bounding_box_pixel + 30/lat_res))]
         
@@ -489,20 +575,23 @@ class analyze_image:
             self.north_south_boundary = self.pixel_to_geo(nsa_bounding_box_pixel,self.projected_lat[:,0])
         else:
             self.north_south_boundary = refine_attempt
-        print(self.north_south_boundary)
+        print("boundary latitude:", self.north_south_boundary)
         #get north south flux ratios (15 deg 30 deg 45 deg 60 deg 90 deg)
         if self.figures["persist_figures"] == "wait_till_end":
-            self.show(force =True)
+            self.show(force = True)
         #get if
         return "not implemented yet"
 
 class complete_cube:
-    def __init__(self, parent_directory: str, cube_subdir : str, save_location: None, clear_cache: bool = False):
-        if save_location is None:
-            save_location = os.path.join(parent_directory, "post_analysis")
-        self.cube_subdir = cube_subdir
-        self.clear_cache = clear_cache
-        self.save_location = save_location
+    def __init__(self, parent_directory : str, cube_subdirectory : str, data_save_folder_name : str = None):
+        if data_save_folder_name is None:
+            save_location = join_strings(parent_directory, cube_subdirectory, "analysis/nsa/")
+        else:
+            save_location = join_strings(parent_directory,cube_subdirectory, data_save_folder_name, "nsa/")
+        self.cube_name = cube_subdirectory
+        self.result_data_base_loc = save_location
+        self.parent_directory = parent_directory
+        self.cwd = join_strings(self.parent_directory, cube_subdirectory)
     def save_data_as_json(self, data: dict, save_location: str, overwrite: bool = None):
         if overwrite is None:
             overwrite = self.clear_cache
@@ -510,44 +599,76 @@ class complete_cube:
             with open(save_location, "w") as outfile:
                 json.dump(data, outfile)
             return "not implemented yet"
-    def analyze_dataset(self, cube, overwrite: bool = None):
-        
-
-        self.cube_vis = pyvims.VIMS(cube, channel="vis")
-        self.cube_ir = pyvims.VIMS(cube, channel = "ir")
-        
+    def analyze_cube(self, cube : str = None):
+        if cube is None:
+            print("since no cube was provided, defaulting to cube", self.cube_name)
+            cube = self.cube_name
+        base_cube = join_strings(self.cwd, cube)
+        if not os.path.exists(base_cube + "_vis.cub"):
+            print("vis cube not found, checking dir", base_cube + "_vis.cub")
+            return None
+        if not os.path.exists(base_cube + "_ir.cub"):
+            print("ir cube not found, checking dir", base_cube + "_ir.cub")
+            return None
+        self.cube_vis = pyvims.VIMS(cube  + "_vis.cub", self.cwd, channel="vis")
+        self.cube_ir = pyvims.VIMS(cube   + "_ir.cub", self.cwd, channel = "ir")
         # #visual analysis
-        # for band in self.cube_vis.bands:
-        #     if surface_windows[int(band)]:
-        #         continue
-        #     analysis = analyze_image()
-        #     data = analysis.complete_image_analysis_from_cube(self.cube_vis, int(band), self.save_location)
         
         #Infrared analysis
-        lats = []
-        for band in range(np.min(self.cube_ir.bands),np.max(self.cube_ir.bands)+1, 5):
-            if int(band) in ir_surface_windows:
-                continue
-            analysis = analyze_image(False)
-            
-            try:
-                if len(lats) > 10:
-                    lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band), np.mean(lats))
-                else:
-                    lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band))
+        lats = check_if_exists_or_write("prejudiced_lats.pkl", base = self.result_data_base_loc, prefix = "cache")
+        if lats is False:
+            lats = []
+            for band in range(1,np.max(self.cube_vis.bands)+1, 5):
+                if surface_windows[int(band)-1]:
+                    continue
+                analysis = analyze_image(False)
+                try:
+                    if len(lats) > 10:
+                        lat = analysis.cube_to_unrefined_prediction(self.cube_vis, int(band), np.mean(lats))
+                    else:
+                        lat = analysis.cube_to_unrefined_prediction(self.cube_vis, int(band))
+                except ValueError:
+                    continue
+                if lat is not None:
+                    lats.append(lat)
+                print(lat)
+            for band in range(np.min(self.cube_ir.bands),np.max(self.cube_ir.bands)+1, 5):
+                if int(band)-1 in ir_surface_windows:
+                    continue
+                analysis = analyze_image(False)
+                try:
+                    if len(lats) > 10:
+                        lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band), np.mean(lats))
+                    else:
+                        lat = analysis.cube_to_unrefined_prediction(self.cube_ir, int(band))
+                except ValueError:
+                    continue
+                if lat is not None:
+                    lats.append(lat)
+                print(lat)
+            check_if_exists_or_write("prejudiced_lats.pkl", base = self.result_data_base_loc, prefix = "cache", save = True, data = lats)
+        prejudice_lat = np.mean(lats)
 
-            except ValueError:
+        analysis_objects = {}
+        for band in self.cube_vis.bands:
+            if surface_windows[int(band)-1]:
                 continue
-            lats.append(lat)
-            print(lat)
-        prejudiced = np.mean(lats)
+            analysis = analyze_image(show_figures = False, figures=False)
+            data = analysis.complete_image_analysis_from_cube(self.cube_vis, int(band), self.result_data_base_loc, biased_lat = prejudice_lat)
+            key = str(self.cube_vis.w[int(band)]) + "µm_" + str(int(band))
+            check_if_exists_or_write(key + ".pkl", base = self.result_data_base_loc, prefix = "bands", save = True, data = analysis, force_write=True, verbose=False)
+            print(key)
+            analysis_objects[key] = analysis
         for band in self.cube_ir.bands:
             if int(band) in ir_surface_windows:
                 continue
-            analysis = analyze_image()
-            data = analysis.complete_image_analysis_from_cube(self.cube_ir, int(band), self.save_location, biased_lat = prejudiced)
-
-
+            analysis = analyze_image(show_figures = False, figures=False)
+            data = analysis.complete_image_analysis_from_cube(self.cube_ir, int(band), self.result_data_base_loc, biased_lat = prejudice_lat)
+            key = str(self.cube_vis.w[int(band)]) + "_" + str(int(band))
+            check_if_exists_or_write(key + ".pkl", base = self.result_data_base_loc, prefix = "bands", save = True, data = analysis, force_write=True)
+            print(key)
+            analysis_objects[key] = analysis
+        check_if_exists_or_write("analysis_objects.pkl", base = self.result_data_base_loc, save = True, data = analysis_objects, force_write=True)
 class analyze_complete_dataset:
     def __init__(self, cubes_location, manifest_sublocation) -> None:
         self.cubes_location = cubes_location
@@ -572,534 +693,5 @@ class analyze_complete_dataset:
         return "not implemented yet"
         
     
-class data:
-    def __init__(self, directory, datasetName, shiftDegree, purpose):
-        # create all class paths,directories, and variables
-        self.createDirectories(directory, datasetName)
-        self.createLists(purpose, datasetName)
-        self.analysisPrep(shiftDegree)
-        # gets purpose condition and executes individual operations based on purpose
-        self.conditionals()
-
-    def createDirectories(self, directory, flyby):  # create all file directory paths
-        # basic datasets
-        self.directoryList = directory
-        self.flyby = flyby[0]
-        self.masterDirectory = self.directoryList["flyby_parent_directory"]
-        self.csvFolder = self.directoryList["flyby_data"]
-        self.tFolder = os.path.join(
-            self.directoryList["flyby_parent_directory"], self.flyby)
-        self.imageFolder = os.path.join(
-            self.directoryList["flyby_parent_directory"], self.flyby, self.directoryList["flyby_image_directory"])
-        # finding files
-        try:
-            self.csvFile = [os.path.join(self.tFolder, self.csvFolder, file) for file in os.listdir(
-                os.path.join(self.tFolder, self.csvFolder))]
-            if len(self.csvFile) == 1:
-                self.csvFile = self.csvFile[0]
-        except:
-            print("no csv file found")
-        self.allFiles = [os.path.join(self.imageFolder, e) for e in os.listdir(self.imageFolder)]
-        self.resultsFolder = os.path.join(
-            self.masterDirectory, self.directoryList["analysis_folder"])
-        self.flyby_bg_info = os.path.join(
-            self.masterDirectory, self.directoryList["flyby_info"])
-        if len(self.allFiles) != 96:
-            print("missing 1+ files")
-
-    def createLists(self, purpose, NSA):  # create global variables for data
-        self.NSA = []
-        self.deviation = []
-        self.IF = []
-        self.NS = []
-        self.lat = []
-        self.lon = []
-        self.iterations = []
-        self.goalNSA = NSA[1]
-        self.errorMargin = NSA[2]
-        self.leftCrop = NSA[3][0]
-        self.rightCrop = NSA[3][1]
-        self.purpose = purpose
-        if self.purpose[0] == "tilt":
-            self.band = []
-        elif self.purpose[0] == "if_sh":
-            self.if_sh = []
-            self.latSh = []
-        self.play = False
-
-    def analysisPrep(self, shiftDegree):
-        try:
-            self.im = plt.imread(self.allFiles[0])[:, :, 0]
-        except:
-            self.im = plt.imread(self.allFiles[0])[:, :]
-        self.height = len(self.im)
-        self.width = len(self.im[0])
-        self.im = self.im.astype(np.float32)
-
-        if len(self.csvFile) == 2:
-            try:
-                nans = np.empty((1, self.width))
-                nans[:] = np.nan
-                if "lat" in self.csvFile[0]:
-                    self.lat = np.reshape(np.append(
-                        (pd.read_csv(self.csvFile[0])), nans, axis=0), (self.height, self.width))
-                    self.lon = np.reshape(np.append(
-                        (pd.read_csv(self.csvFile[1])), nans, axis=0), (self.height, self.width))
-                else:
-                    self.lat = np.reshape(np.append(
-                        (pd.read_csv(self.csvFile[1])), nans, axis=0), (self.height, self.width))
-                    self.lon = np.reshape(np.append(
-                        (pd.read_csv(self.csvFile[0])), nans, axis=0), (self.height, self.width))
-            except:
-                raise ValueError("error finding csv")
-        else:
-            try:
-                self.lat = self.Jcube(
-                    geo_csv=self.csvFile, var='lat', nL=self.height, nS=self.width)
-                self.lon = self.Jcube(
-                    geo_csv=self.csvFile, var='lon', nL=self.height, nS=self.width)
-                x = 0
-            except:
-                raise ValueError("error finding csv")
-        self.columnLat = self.lat[:, 0]
-        temp = self.leftCrop
-        if self.leftCrop < 0:
-            self.leftCrop = [0, abs(self.rightCrop)]
-            self.rightCrop = [abs(temp), self.width]
-            self.leftCrop[0] = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x] - self.leftCrop[0]))
-            self.rightCrop[0] = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x]-self.rightCrop[0]))
-            self.leftCrop[1] = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x] - self.leftCrop[1]))
-            self.rightCrop[1] = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x]-self.rightCrop[1]))
-        else:
-            self.leftCrop = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x] - self.leftCrop))
-            self.rightCrop = min(range(len(self.lon[0, :])), key=lambda x: abs(
-                self.lon[0, x]-self.rightCrop))
-        if "Ti" in self.flyby:
-            self.subset = tuple(
-                [(self.columnLat > self.goalNSA - 30) & (self.columnLat < self.goalNSA + 30.0)])
-        else:
-            self.subset = tuple(
-                [(self.columnLat > self.goalNSA - 15) & (self.columnLat < self.goalNSA + 15.0)])
-        # subset HC band b/t 30°S to 0°N
-        self.lat_sh = self.columnLat[self.subset]
-        self.lon_sh = self.lon[self.subset]
-        latRange = np.nanmax(self.lat)-np.nanmin(self.lat)
-        latTicks = len(self.lat)/latRange
-        self.shiftDegree = shiftDegree
-        self.num_of_nans = int(latTicks*shiftDegree)
-        self.nans = [np.nan]*(self.num_of_nans)
-        if self.purpose[0] == "if_sh":
-            self.ifSubset = tuple(
-                [(self.columnLat > -90.0) & (self.columnLat < 90.0)])
-
-    def createFolder(self, folderPath=None):
-        if not folderPath:
-            folderPath = os.path.join(
-                self.masterDirectory, self.directoryList["analysis_folder"])
-        if not os.path.exists(folderPath):
-            os.makedirs(folderPath)
-        self.resultsFolder = folderPath
-
-    def createFile(self):
-        open(self.resultsFolder + self.flyby + "_analytics.csv", "w")
-        x = open(self.resultsFolder + self.flyby +
-                 "_analytics.csv", "a+", newline='')
-        self.analysisFile = x
-
-    def fileWrite(self, x):
-        a = csv.writer(self.analysisFile)
-        a.writerow(x)
-
-    def fileClose(self):
-        self.analysisFile.close()
-
-    def averages(self, x):
-        X = []
-        for i in range(len(x)):
-            X.append(np.mean(x[i]))
-        return X
-
-    # Get image to create arrays that help read image data as latitude data
-    def Jcube(self, nL, nS, csv=None, geo_csv=None, bands=None, var=None):
-        '''Converts any Jcube or geocube csv file to numpy 2D array
-        Note: Requires pandas and numpy.
-
-        Parameters
-        ----------
-        csv: str
-            Name of Jcube csv file with raw I/F data 
-        geo_csv: str
-            Name of csv file from geocubes with geographic info on a VIMS cube (.cub) 
-            Can include relative directory location (e.g. 'some_dir/test.csv')
-        nL: int
-            number of lines or y-dimension of VIMS cube
-        nS: int
-            number of samples or x-dimension of VIMS cube
-        vars: str
-            geo_cube parameters that include "I/F", lat", "lon", "lat_res", "lon_res", 
-            "phase", "inc", "eme", and "azimuth"
-        '''
-        # check var is the correct string
-        if var not in ["lat", "lon", "lat_res", "lon_res", "phase", "inc", "eme", "azimuth"] and var is not None:
-            raise ValueError("Variable string ('var') is not formatted as one of the following options: \n" +
-                             '"I/F", "lat", "lon", "lat_res", "lon_res", "phase", "inc", "eme", "azimuth"')
-        # create image of Titan
-        if geo_csv is None:
-            # read csv; can include relative directory
-            csv = pd.read_csv(csv, header=None)
-
-            def getMeanImg(csv, bands, nL, nS):
-                '''Get the mean I/F image for a set of wavelengths from a Jcube csv file
-                Note: a single 'bands' value will return the image at that wavelength.
-
-                Parameters
-                ----------
-                csv: str 
-                    name of csv file for VIMS cube
-                bands: int or list of int 
-                    band values from 96-352 for near-infrared VIMS windows
-                nL: int
-                    number of lines 
-                nS: int
-                    number of samples
-                '''
-                if isinstance(bands, int):
-                    bands = [bands]
-                img = []
-                for band in bands:
-                    cube = np.array(csv)[:, band].reshape(nL, nS)
-                    cube[cube < -1e3] = 0
-                    img.append(cube)  # [band, :, :])
-                return np.nanmean(img, axis=0)
-            return getMeanImg(csv=csv, bands=bands, nL=nL, nS=nS)
-        # create geocube
-        if csv is None:
-            # read csv; can include relative directory
-            geo = pd.read_csv(geo_csv, header=None)
-            # output chosen variable 2D array
-            if var == 'lat':
-                return np.array(geo)[:, 0].reshape(nL, nS)
-            if var == 'lon':
-                return np.array(geo)[:, 1].reshape(nL, nS)
-            if var == 'lat_res':
-                return np.array(geo)[:, 2].reshape(nL, nS)
-            if var == 'lon_res':
-                return np.array(geo)[:, 3].reshape(nL, nS)
-            if var == 'phase':
-                return np.array(geo)[:, 4].reshape(nL, nS)
-            if var == 'inc':
-                return np.array(geo)[:, 5].reshape(nL, nS)
-            if var == 'eme':
-                return np.array(geo)[:, 6].reshape(nL, nS)
-            if var == 'azimuth':
-                return np.array(geo)[:, 7].reshape(nL, nS)
-        # create geocube
-        if csv is None:
-            # read csv; can include relative directory
-            geo = pd.read_csv(geo_csv, header=None)
-            return (np.array(geo)[:, 0].reshape(nL, nS), np.array(geo)[:, 1].reshape(nL, nS))
-
-    def brightness(self, im_file):
-        im = Image.open(im_file).convert('L')
-        stat = ImageStat.Stat(im)
-        return stat.mean[0]
-
-    def polyfit(self, x, y, degree):  # alternate fit for polynomials
-        results = {}
-        coeffs = np.polyfit(x, y, degree)
-        p = np.poly1d(coeffs)
-        # calculate r-squared
-        yhat = p(x)
-        ybar = np.sum(y)/len(y)
-        ssreg = np.sum((yhat-ybar)**2)
-        sstot = np.sum((y - ybar)**2)
-        return ssreg / sstot
-
-    def gaussian(self, x, amplitude, mean, stddev):  # gaussian fit
-        return amplitude * np.exp(-((x - mean) / 4 / stddev)**2)
-
-    def poly6(self, x, g, h, i, j, a, b, c):  # sextic function
-        return g*x**6+h*x**5+i*x**4+j*x**3+a*x**2+b*x+c
-
-    def poly6Prime(self, x, g, h, i, j, a, b, c):  # derivative of sextic function
-        return 6*g*x**5+5*h*x**4+4*i*x**3+3*j*x**2+2*a*x+b
-
-    # derivative of sextic function coefficents
-    def poly6Derivative(self, g, h, i, j, a, b, c):
-        return [6*g, 5*h, 4*i, 3*j, 2*a, b]
-
-    def running_mean(self, x, N):  # window avearage
-        return np.convolve(x, np.ones(N)/N, mode='valid')
-
-    def conditionals(self):
-        print("purpose is", self.purpose[0])
-        if self.purpose[0] == "data":
-            self.getDataControl()
-        elif self.purpose[0] == "tilt":
-            self.getTiltControl()
-        elif self.purpose[0] == "if_sh":
-            self.getIf_shControl()
-        else:
-            print("data output type not understood; ",
-            self.purpose[0], " not valid")
-
-    def getDataControl(self):  # iteration over images within flyby
-        for self.iter in range(len(self.allFiles)):
-            self.a = time.time()
-            self.currentFile = self.allFiles[self.iter]
-            self.iterations.append(self.iter)
-            self.dataAnalysis()
-            print("dataset", self.flyby, "     image", "%02d" % (self.iter), "     boundary", format(
-                self.NSA[self.iter], '.15f'), "      deviation", format(self.deviation[self.iter], '.15f'), "        N/S", format(self.NS[self.iter], '.10f'))
-        # write data
-        if "write" in self.purpose[1]:
-            # create folder and file
-            self.createFolder()
-            self.createFile()
-            try:
-                datasetAverage = self.averages(
-                    [self.NSA, np.std(self.NSA), self.NS])
-                self.NSA.append(datasetAverage[0])
-                self.deviation.append(datasetAverage[1])
-                self.NS.append(datasetAverage[2])
-                self.iterations.append(self.flyby)
-                self.NSA.insert(0, "NSA")
-                self.deviation.insert(0, "Deviation")
-                self.NS.insert(0, "N/S")
-                self.iterations.insert(0, "File Number")
-                self.fileWrite(self.NSA)
-                self.fileWrite(self.deviation)
-                self.fileWrite(self.NS)
-                self.fileWrite(self.iterations)
-            finally:
-                self.fileClose()
-
-    def getIf_shControl(self):
-        if len(self.purpose[1]) == 0:
-            for self.iter in range(len(self.allFiles)):
-                self.currentFile = self.allFiles[self.iter]
-                self.iterations.append(self.iter)
-                self.ifAnalysis()
-        else:
-            for self.iter in range(len(self.allFiles)):
-                if self.iter in self.purpose[1]:
-                    self.currentFile = self.allFiles[self.iter]
-                    self.iterations.append(self.iter)
-                    self.if_sh.append(self.ifAnalysis())
-
-    def getTiltControl(self):
-        # go through each file
-        for self.iter in range(len(self.allFiles)):
-            self.currentFile = self.allFiles[self.iter]
-            if self.iter in self.purpose[1]:
-                self.tiltAnalysis()
-        # write data
-            # print(self.band)
-            pass
-
-    def visualizeBrightnessDifferenceSamplingArea(self, im, x, nsaLat):
-        if type(self.leftCrop) is list:
-            im[x[0]:x[1], self.rightCrop[0]:self.leftCrop[0]] *= 2
-            im[(x[1]+1):x[2], self.rightCrop[0]:self.leftCrop[0]] *= 0.5
-            im[x[0]:x[1], self.rightCrop[1]:self.leftCrop[1]] *= 2
-            im[(x[1]+1):x[2], self.rightCrop[1]:self.leftCrop[1]] *= 0.5
-        else:
-            im[x[0]:x[1], self.leftCrop:self.rightCrop] *= 2
-            im[(x[1]+1):x[2], self.leftCrop:self.rightCrop] *= 0.5
-        plt.imshow(im, cmap='Greys')
-        plt.show()
-
-    def brightnessDifference(self, im, nsaLat):
-        splitY = min(range(len(self.lat[:, 0])),
-                     key=lambda x: abs(self.lat[x, 0]-nsaLat))
-        horizontalSample = 4
-        verticalSample = 30
-        northSplit = min(range(len(self.lat[:, 0])), key=lambda x: abs(
-            self.lat[x, 0]-verticalSample-nsaLat))
-        southSplit = min(range(len(self.lat[:, 0])), key=lambda x: abs(
-            self.lat[x, 0]+verticalSample-nsaLat))
-
-        if type(self.leftCrop) is list:
-            north = im[northSplit:splitY, self.rightCrop[0]:self.leftCrop[0]]
-            south = im[(splitY+1):southSplit,
-                       self.rightCrop[0]:self.leftCrop[0]]
-            north = np.concatenate(
-                (north, im[northSplit:splitY, self.rightCrop[1]:self.leftCrop[1]]), axis=1)
-            south = np.concatenate(
-                (south, im[(splitY+1):southSplit, self.rightCrop[1]:self.leftCrop[1]]), axis=1)
-        else:
-            if self.leftCrop > self.rightCrop:
-                north = im[northSplit:splitY, self.rightCrop:self.leftCrop]
-                south = im[(splitY+1):southSplit, self.rightCrop:self.leftCrop]
-            else:
-                north = im[northSplit:splitY, self.leftCrop:self.rightCrop]
-                south = im[(splitY+1):southSplit, self.leftCrop:self.rightCrop]
-        northM = np.mean(north[north != 0.])
-        southM = np.mean(south[south != 0.])
-        return northM/southM
-
-    def dataAnalysis(self):
-        try:  # open image arrays
-            self.im = plt.imread(self.currentFile)[:, :, 0]
-        except:
-            self.im = plt.imread(self.currentFile)[:, :]
-        self.im = self.im.astype(np.int16)
-        hc_band = np.empty((self.height, self.width), float)
-        nsa_lats = []
-        nsa_lons = []
-        cols = []
-        latRange = np.max(self.lat)-np.min(self.lat)
-        latTicks = len(self.lat)/latRange
-        # get latitude values of each pixel using CSV
-        width = []
-        subtraction = (np.insert(self.im, 0, np.array(
-            self.num_of_nans*[[0]*self.width]), axis=0) - np.concatenate((self.im, self.num_of_nans*[[0]*self.width])))
-        hc_band = subtraction[int(
-            np.round(self.num_of_nans/2, 0)):-1*int(np.round(self.num_of_nans/2, 0))]
-        if True:
-            self.createFolder(os.path.join(
-                self.masterDirectory, self.flyby, "hc_band"))
-            
-            # self.convert_array_to_image(hc_band, os.path.join(self.masterDirectory, self.flyby, "hc_band", (os.path.splitext(os.path.relpath(
-            #     self.currentFile, os.path.join(self.masterDirectory, self.flyby, self.directoryList["flyby_image_directory"])))[0] + "_band")))
-        if_sh = hc_band[self.subset]
-        lon_subset = []
-        if type(self.leftCrop) is list:
-            a = sorted((self.rightCrop[0], self.leftCrop[0]))
-            b = sorted((self.rightCrop[1], self.leftCrop[1]))
-            lon_subset = np.concatenate((range(*a), range(*b)))
-        else:
-            if self.leftCrop > self.rightCrop:
-                lon_subset = range(self.rightCrop, self.leftCrop)
-            else:
-                lon_subset = range(self.leftCrop, self.rightCrop)
-        for col in range(self.width):
-            if col in lon_subset:
-                columnHC = hc_band[:, col]
-                if_sh = columnHC[self.subset]  # subset HC band b/t 30°S to 0°N
-                if np.min(if_sh) != np.max(if_sh):
-                    try:
-                        # apply sextic regression to data
-                        popt, _ = curve_fit(self.poly6, self.lat_sh, if_sh)
-                        # get derivative of sextic regression
-                        poptD = self.poly6Derivative(*popt)
-                        # roots (Real and imaginary) of derivative function
-                        derivativeRoot = np.roots(poptD)
-                        # remove extraneous soulutions (imaginary)
-                        realDerivativeRoots = derivativeRoot[np.isreal(
-                            derivativeRoot)]
-                        drIndex = min(range(len(realDerivativeRoots)), key=lambda x: abs(
-                            realDerivativeRoots[x]-self.goalNSA))  # find value closest to NSA
-                        derivativeRoots = realDerivativeRoots[drIndex]
-                        if abs(derivativeRoots.real-self.goalNSA) >= self.errorMargin:
-                            width.append(False)
-                        else:
-                            nsa_lats.append(derivativeRoots.real)
-                            width.append(True)
-                    except:
-                        width.append(False)
-            else:
-                width.append(False)
-        self.NSA_Analysis(nsa_lats, self.im, width)
-        print(time.time() - self.a)
-
-    def ifAnalysis(self):
-        # open image arrays
-        try:
-            self.im = plt.imread(self.currentFile)[:, :, 0]
-        except:
-            self.im = plt.imread(self.currentFile)[:, :]
-        self.im = self.im.astype(np.float32)
-        self.hc_band = np.empty((self.height, self.width), float)
-        # get latitude values of each pixel using CSV
-        count = 0
-        non_zero = np.array(np.any(self.im != 0, axis=1))
-        image = self.im[non_zero, :]
-        crop = self.im[non_zero, :]
-        ab = self.lat[non_zero, 0]
-        Result = image[:, ~np.any(crop == 0, axis=0)]
-        try:
-            b = Result[int(len(Result)*0.25):int(len(Result)*0.75),
-                       int(len(Result[0])*0.25):int(len(Result[0])*0.75)]
-        except:
-            try:
-                self.im = plt.imread(self.currentFile)[:, :, 0]
-            except:
-                self.im = plt.imread(self.currentFile)[:, :]
-            b = 0
-        b = np.mean(b)*10
-        a = np.mean(Result, axis=1)
-        ab = ab[abs(a) < abs(b)]
-        a = a[abs(a) < abs(b)]
-        return [ab, a]
-
-    def smooth(self, y, box_pts):
-        box = np.ones(box_pts)/box_pts
-        y_smooth = np.convolve(y, box, mode='same')
-        return y_smooth
-
-    def tiltAnalysis(self):
-        # open image arrays
-        if self.iter in self.purpose[1]:
-            try:
-                self.im = plt.imread(self.currentFile)[:, :, 0]
-            except:
-                self.im = plt.imread(self.currentFile)[:, :]
-            self.im = self.im.astype(np.float32)
-            self.hc_band = np.empty((self.height, self.width), float)
-            nsa_lats = []
-            nsa_lons = []
-            cols = []
-            columns = []
-            lon_shTilt = []
-            for col in self.purpose[2]:
-                x = self.columnAnalysis(col)
-                if x != None:
-                    nsa_lats.append(x)
-                    lon_shTilt.append(self.lon[0, col])
-                    columns.append(col)
-
-
-    def linearRegress(self, x, y):
-        return np.polyfit(x, y, 1)
-
-    def angle(self, slope):
-        return 180/math.pi*np.arctan(slope)
-
-
-
-    def if_sh_data(self, column):
-        subtraction = (np.insert(self.im[:, column], [
-                       0]*self.num_of_nans, self.nans) - np.concatenate((self.im[:, column], self.nans)))
-        self.hc_band[:, column] = subtraction[int(
-            self.num_of_nans/2):int(-self.num_of_nans/2)]
-        # hc_band[crop[0]:crop[1],crop[2]:crop[3]]
-        columnHC = self.hc_band[:, column]
-        if_sh = columnHC  # subset HC band b/t 30°S to 0°N
-        # lat_sh = self.columnLat[self.subset]  ## subset HC band b/t 30°S to 0°N
-        # lon_sh = self.lon[:,column][self.subset]  ## subset HC band b/t 30°S to 0°N
-        return if_sh
-
-    def NSA_Analysis(self, im_nsa_lat, image, x):
-        dev = np.std(im_nsa_lat)  # standard deviation
-        average = np.nanmean(im_nsa_lat)  # standard average
-        combo = 4
-        movingAverageList = self.running_mean(
-            im_nsa_lat, combo)  # moving average
-        # if "showAverage" in self.purpose[1]:
-        #     plt.plot(range(len(movingAverageList)),movingAverageList)
-        #     plt.show()
-        movingAvg = np.mean(movingAverageList)  # moving average
-        # difference between north and south
-        diff = self.brightnessDifference(image, movingAvg)
-        self.NSA.append(movingAvg)
-        self.deviation.append(dev)
-        self.NS.append(diff)
-
-image = complete_cube("/Users/aadvik/Desktop/NASA/North_South_Asymmetry/cubes", "T62", "/Users/aadvik/Desktop/NASA/North_South_Asymmetry/cubes/results")
-image.analyze_dataset("C1634084887_1")
+image = complete_cube("C:/Users/aadvi/Desktop/North_South_Asymmetry/cubes", "C1634084887_1" )
+image.analyze_cube()
